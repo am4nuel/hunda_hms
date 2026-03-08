@@ -1,0 +1,58 @@
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,300..800;1,300..800&family=Playfair+Display:ital,wght@0,400..900;1,400..900&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+
+  --color-chalet-bg: #FDFDFB;
+  --color-chalet-dark: #3C3733;
+  --color-chalet-dark-light: #4A4440;
+  --color-chalet-gold: #C3A370;
+  --color-chalet-gold-hover: #b08d55;
+  --color-chalet-gray: #8F8C8A;
+  --color-chalet-light-gray: #F2F0EB;
+
+  --font-sans: 'Montserrat', sans-serif;
+  --font-serif: 'Playfair Display', serif;
+
+  --animate-fade-in: fadeIn 1s ease-out forwards;
+  --animate-slide-up: slideUp 0.8s ease-out forwards;
+
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  @keyframes slideUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+}
+
+@layer base {
+  :root {
+    --background: 48 20% 99%;
+    --foreground: 25 8% 22%;
+    --primary: 37 43% 60%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 25 8% 22%;
+    --secondary-foreground: 48 20% 99%;
+    --muted: 24 3% 55%;
+    --muted-foreground: 25 8% 22%;
+    --border: 24 3% 85%;
+    --input: 24 3% 85%;
+    --ring: 37 43% 60%;
+    --radius: 0.5rem;
+  }
+
+  body {
+    @apply bg-chalet-bg text-chalet-dark font-sans antialiased selection:bg-chalet-gold/30 selection:text-chalet-dark;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-serif font-medium;
+  }
+}

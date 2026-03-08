@@ -1,0 +1,30 @@
+# Dependency directories
+node_modules/
+
+# Environment variables
+.env
+.env.*
+
+# Logs and databases
+*.log
+*.sqlite
+logs/
+
+# Optional: SQLite databases if you use them
+# *.sqlite
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Project specific ignores
+uploads/
+audit_results.json
+guests_output.txt
+users.json
+users.log
+check_shift.txt
+detailed-audit-results.json
+
+# If you want to keep data in these folders but ignore files:
+# !uploads/.gitkeep
