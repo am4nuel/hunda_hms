@@ -1,11 +1,18 @@
 {
   "development": {
     "username": "postgres",
-    "password": "aman@64318080",
-    "database": "hunda_hotel",
-    "host": "127.0.0.1",
+    "password": "vfDUQMTvnxalvOuEteIlShpxDKABbPoG",
+    "database": "railway",
+    "host": "nozomi.proxy.rlwy.net",
     "dialect": "postgres",
-    "logging": false
+    "port": 23499,
+    "logging": false,
+    "dialectOptions": {
+      "ssl": {
+        "require": true,
+        "rejectUnauthorized": false
+      }
+    }
   },
   "test": {
     "username": "postgres",
