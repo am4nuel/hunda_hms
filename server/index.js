@@ -11,6 +11,8 @@ const PORT = process.env.PORT || 8080;
 
 const { Hotel } = require("./models");
 
+const CORS_WHITELIST = process.env.CORS_WHITELIST ? process.env.CORS_WHITELIST.split(',') : [];
+
 const corsOptions = {
   origin: async (origin, callback) => {
     // Allow requests with no origin (like mobile apps or curl)
@@ -30,7 +32,7 @@ const corsOptions = {
         } catch (e) {
           return acc;
         }
-      }, []);
+      }, [...CORS_WHITELIST]); // Include whitelist from environment variables
 
       // In development, allow localhost
       if (process.env.NODE_ENV !== 'production') {
@@ -40,6 +42,7 @@ const corsOptions = {
       if (allAllowedUrls.indexOf(origin) !== -1 || allAllowedUrls.includes('*')) {
         callback(null, true);
       } else {
+        console.warn(`Origin ${origin} not allowed by CORS`);
         callback(new Error('Not allowed by CORS'));
       }
     } catch (error) {
