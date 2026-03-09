@@ -11,6 +11,7 @@ module.exports = {
       apiKey: 'hunda_default_api_key',
       allowedUrls: JSON.stringify([
         'https://hundahms-production.up.railway.app',
+        'https://hundahmsdashboard.netlify.app',
         'http://localhost:5173',
         'http://localhost:5174'
       ]),
