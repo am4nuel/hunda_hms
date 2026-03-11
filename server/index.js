@@ -113,10 +113,15 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/recipes', recipeRoutes);
 app.use('/api/units', unitRoutes);
 
+const { seedUnits } = require('./utils/seedUnits');
+
 server.listen(PORT, async () => {
   try {
     await sequelize.authenticate();
     console.log('Database connected successfully.');
+    
+    // Run seeders conditionally or unconditionally based on business logic
+    await seedUnits();
   } catch (error) {
     console.error('Unable to connect to the database:', error);
   }
