@@ -1,20 +1,12 @@
 const { Unit, Sequelize } = require('../models');
 const { logActivity } = require('../utils/activityLogger');
 
-// @desc    Get all units for a hotel
+// @desc    Get all units
 // @route   GET /api/units
 exports.getAllUnits = async (req, res) => {
   try {
-    const { hotelId } = req.query;
-    
-    // Fetch units that are either global (hotelId is null) or specific to this hotel
+    // Fetch all units (they are now global)
     const units = await Unit.findAll({
-      where: {
-        [Sequelize.Op.or]: [
-          { hotelId: null },
-          { hotelId: hotelId || null }
-        ]
-      },
       order: [['category', 'ASC'], ['name', 'ASC']]
     });
     res.json(units);
@@ -33,7 +25,6 @@ exports.createUnit = async (req, res) => {
       module: 'Inventory',
       details: `Created unit: ${unit.name}`,
       userId: req.user?.id || req.body.userId,
-      hotelId: unit.hotelId,
       req
     });
     res.status(201).json(unit);
@@ -55,7 +46,6 @@ exports.updateUnit = async (req, res) => {
       module: 'Inventory',
       details: `Updated unit: ${unit.name}`,
       userId: req.user?.id || req.body.userId,
-      hotelId: unit.hotelId,
       req
     });
     res.json(unit);
@@ -72,7 +62,6 @@ exports.deleteUnit = async (req, res) => {
     if (!unit) return res.status(404).json({ message: 'Unit not found' });
 
     const unitName = unit.name;
-    const hId = unit.hotelId;
     await unit.destroy();
     
     await logActivity({
@@ -80,7 +69,6 @@ exports.deleteUnit = async (req, res) => {
       module: 'Inventory',
       details: `Deleted unit: ${unitName}`,
       userId: req.user?.id,
-      hotelId: hId,
       req
     });
     res.json({ message: 'Unit deleted' });

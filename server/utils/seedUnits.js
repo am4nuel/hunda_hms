@@ -36,7 +36,7 @@ const seedUnits = async () => {
 
     for (const unit of defaultUnits) {
       const [record, created] = await Unit.findOrCreate({
-        where: { name: unit.name, hotelId: null }, // Global units have null hotelId
+        where: { name: unit.name },
         defaults: unit
       });
 
