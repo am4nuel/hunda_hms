@@ -1,17 +1,31 @@
 module.exports = {
   async up (queryInterface, Sequelize) {
-    await queryInterface.addColumn('HotelAdmins', 'resetPasswordToken', {
-      type: Sequelize.STRING,
-      allowNull: true
-    });
-    await queryInterface.addColumn('HotelAdmins', 'resetPasswordExpires', {
-      type: Sequelize.DATE,
-      allowNull: true
-    });
+    try {
+      await queryInterface.addColumn('HotelAdmins', 'resetPasswordToken', {
+        type: Sequelize.STRING,
+        allowNull: true
+      });
+    } catch (e) {
+      console.log('resetPasswordToken already exists');
+    }
+    
+    try {
+      await queryInterface.addColumn('HotelAdmins', 'resetPasswordExpires', {
+        type: Sequelize.DATE,
+        allowNull: true
+      });
+    } catch (e) {
+      console.log('resetPasswordExpires already exists');
+    }
   },
 
   async down (queryInterface, Sequelize) {
-    await queryInterface.removeColumn('HotelAdmins', 'resetPasswordToken');
-    await queryInterface.removeColumn('HotelAdmins', 'resetPasswordExpires');
+    try {
+      await queryInterface.removeColumn('HotelAdmins', 'resetPasswordToken');
+    } catch (e) {}
+
+    try {
+      await queryInterface.removeColumn('HotelAdmins', 'resetPasswordExpires');
+    } catch (e) {}
   }
 };

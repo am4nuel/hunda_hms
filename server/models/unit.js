@@ -36,10 +36,6 @@ module.exports = (sequelize) => {
       type: DataTypes.DECIMAL(10, 4),
       allowNull: true,
       defaultValue: 1.0000
-    },
-    hotelId: {
-      type: DataTypes.INTEGER,
-      allowNull: true
     }
   }, {
     sequelize,
@@ -47,7 +43,7 @@ module.exports = (sequelize) => {
     indexes: [
       {
         unique: true,
-        fields: ['name', 'hotelId']
+        fields: ['name']
       }
     ]
   });

@@ -3,13 +3,21 @@
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
-    await queryInterface.addColumn('SystemUsers', 'allowedModules', {
-      type: Sequelize.JSON,
-      allowNull: true,
-    });
+    try {
+      await queryInterface.addColumn('SystemUsers', 'allowedModules', {
+        type: Sequelize.JSON,
+        allowNull: true,
+      });
+    } catch (error) {
+       console.log('Column allowedModules already exists or error:', error.message);
+    }
   },
 
   async down(queryInterface, Sequelize) {
-    await queryInterface.removeColumn('SystemUsers', 'allowedModules');
+    try {
+      await queryInterface.removeColumn('SystemUsers', 'allowedModules');
+    } catch (e) {
+      // Ignore
+    }
   }
 };
