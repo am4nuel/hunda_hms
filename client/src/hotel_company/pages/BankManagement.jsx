@@ -111,7 +111,7 @@ const BankManagement = () => {
         </button>
       </div>
 
-      <div className="bg-[var(--theme-bg-card)] rounded-xl border border-[var(--theme-border)] overflow-hidden shadow-sm">
+      <div className="bg-white rounded-xl border border-[var(--theme-border)] overflow-hidden shadow-sm">
         <table className="w-full text-left">
           <thead className="bg-[var(--theme-bg)] border-b border-[var(--theme-border)]">
             <tr>
@@ -180,7 +180,7 @@ const BankManagement = () => {
 
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-          <div className="bg-[var(--theme-bg-card)] w-full max-w-md rounded-2xl border border-[var(--theme-border)] shadow-2xl overflow-hidden scale-in">
+          <div className="bg-white w-full max-w-md rounded-2xl border border-[var(--theme-border)] shadow-2xl overflow-hidden scale-in">
             <div className="px-6 py-4 border-b border-[var(--theme-border)] flex justify-between items-center bg-[var(--theme-bg)]">
               <h2 className="text-xl font-bold text-[var(--theme-text)]">
                 {editingBank ? 'Edit Bank' : 'Add New Bank'}

@@ -308,11 +308,11 @@ const MenuManagement = () => {
             <form onSubmit={handleCategorySubmit} className="p-8 space-y-4 text-black">
               <div className="space-y-1">
                 <label className="text-[10px] font-semibold uppercase text-gray-400">Category Name</label>
-                <Input required value={categoryFormData.name} onChange={e => setCategoryFormData({...categoryFormData, name: e.target.value})} />
+                <Input required placeholder="e.g. Main Course" value={categoryFormData.name} onChange={e => setCategoryFormData({...categoryFormData, name: e.target.value})} />
               </div>
               <div className="space-y-1">
                 <label className="text-[10px] font-semibold uppercase text-gray-400">Description</label>
-                <Input value={categoryFormData.description} onChange={e => setCategoryFormData({...categoryFormData, description: e.target.value})} />
+                <Input placeholder="Short category description..." value={categoryFormData.description} onChange={e => setCategoryFormData({...categoryFormData, description: e.target.value})} />
               </div>
               <Button type="submit" className="w-full h-12 bg-black text-white font-semibold uppercase tracking-widest mt-4 rounded-xl">
                 {editingCategory ? 'Save Changes' : 'Create Category'}
@@ -333,11 +333,11 @@ const MenuManagement = () => {
               <div className="grid grid-cols-2 gap-6">
                 <div className="space-y-1">
                   <label className="text-[10px] font-semibold uppercase text-gray-400">Dish Name</label>
-                  <Input required value={itemFormData.name} onChange={e => setItemFormData({...itemFormData, name: e.target.value})} />
+                  <Input required placeholder="e.g. Grilled Chicken Salad" value={itemFormData.name} onChange={e => setItemFormData({...itemFormData, name: e.target.value})} />
                 </div>
                 <div className="space-y-1">
                   <label className="text-[10px] font-semibold uppercase text-gray-400">Base Price (ETB)</label>
-                  <Input type="number" step="0.01" required value={itemFormData.price} onChange={e => setItemFormData({...itemFormData, price: e.target.value})} />
+                  <Input type="number" step="0.01" required placeholder="e.g. 250" value={itemFormData.price} onChange={e => setItemFormData({...itemFormData, price: e.target.value})} />
                 </div>
               </div>
               
