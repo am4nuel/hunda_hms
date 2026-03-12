@@ -15,13 +15,21 @@ const PLACEHOLDER_ROOM_IMAGES = [
 function RoomCard({ room, index, onReserve, isDateSearched }) {
   const imageUrl = room.image || PLACEHOLDER_ROOM_IMAGES[index % PLACEHOLDER_ROOM_IMAGES.length];
   
-  // If we searched for dates, any room in the list is available for those dates.
-  // Otherwise, respect standard status (Available/Under maintenance)
-  const isAvailable = room.status !== 'Under maintenance' && room.status !== 'Occupied';
-  const displayStatus = isDateSearched ? 'Available' : (room.status || 'Available');
+  // If we searched for dates, respect the isReserved flag from backend.
+  // Otherwise, respect standard status.
+  const isMaintenance = room.status === 'Under maintenance';
+  
+  // A room is available if it's not reserved for the searched dates AND not under maintenance.
+  const isAvailable = !room.isReserved && !isMaintenance;
+  
+  let displayStatus = isMaintenance ? 'Not Available' : 'Available';
+  
+  if (isDateSearched) {
+    displayStatus = room.isReserved ? 'Reserved' : (isMaintenance ? 'Not Available' : 'Available');
+  }
 
   return (
-    <div className="group relative bg-white border border-black/5 hover:border-chalet-gold-hover transition-all duration-500 flex flex-col h-full">
+    <div className={`group relative bg-white border ${room.isReserved ? 'border-red-100 opacity-90' : 'border-black/5'} hover:border-chalet-gold-hover transition-all duration-500 flex flex-col h-full`}>
       {/* Image */}
       <div className="relative h-[300px] overflow-hidden">
         <img
@@ -37,7 +45,7 @@ function RoomCard({ room, index, onReserve, isDateSearched }) {
       </div>
 
       {/* Content */}
-      <div className="p-8 flex flex-col flex-grow bg-chalet-bg">
+      <div className={`p-8 flex flex-col flex-grow ${room.isReserved ? 'bg-red-50/30' : 'bg-chalet-bg'}`}>
         <div className="flex items-start justify-between mb-4 gap-4">
           <div>
             <p className="text-[10px] font-sans font-semibold uppercase tracking-[0.2em] text-chalet-gold mb-2">
@@ -77,7 +85,7 @@ function RoomCard({ room, index, onReserve, isDateSearched }) {
               : 'bg-chalet-light-gray border-transparent text-chalet-gray cursor-not-allowed'
           }`}
         >
-          {isAvailable ? 'Reserve Now' : 'Not Available'}
+          {room.isReserved ? 'Reserved' : (isAvailable ? 'Reserve Now' : 'Not Available')}
         </button>
       </div>
     </div>
@@ -112,10 +120,12 @@ export default function RoomsPage() {
   // View State
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [selectedRoom, setSelectedRoom] = useState(null);
+  const [quickAccess, setQuickAccess] = useState('');
 
   const fetchRooms = (start, end) => {
     setLoading(true);
     let url = '/rooms';
+    // Only filter if BOTH dates are explicitly provided
     if (start && end) url += `?startDate=${start}&endDate=${end}`;
     
     apiFetch(url)
@@ -125,11 +135,12 @@ export default function RoomsPage() {
   };
 
   useEffect(() => {
-    // Initial fetch (all rooms)
+    // Initial fetch: show all rooms without date filtering
     fetchRooms();
   }, []);
 
   const handleDateSearch = () => {
+    setQuickAccess(''); // Reset quick access when manual search is used
     if (dates.checkIn && dates.checkOut) fetchRooms(dates.checkIn, dates.checkOut);
     else fetchRooms(); // Reset if clearing dates
   };
@@ -175,60 +186,81 @@ export default function RoomsPage() {
       </div>
 
       {/* ── Search Bar ── */}
-      <div className="bg-white border-b border-black/5 sticky top-[72px] z-40 shadow-sm">
-        <div className="max-w-6xl mx-auto">
-          
-          {/* Quick Dates & Custom Date Picker */}
-          <div className="p-4 md:p-6 border-b border-black/5 flex flex-col md:flex-row items-start md:items-center gap-6 justify-between">
-            <div className="flex flex-wrap items-center gap-3">
-              <span className="text-[10px] font-bold uppercase tracking-widest text-chalet-gray mr-2 flex items-center gap-1">
-                <Calendar className="w-3 h-3" /> Quick Availability
+      <div className="bg-white border-b border-black/5 sticky top-[72px] z-40 shadow-sm overflow-x-auto no-scrollbar">
+        <div className="max-w-7xl mx-auto px-6 py-4">
+          <div className="flex flex-nowrap items-end gap-4 min-w-max">
+            
+            {/* Quick Availability Dropdown */}
+            <div className="flex flex-col">
+              <label className="text-[9px] uppercase tracking-widest text-chalet-gray font-bold mb-1 ml-1 flex items-center gap-1">
+                <Calendar className="w-2.5 h-2.5" /> Quick Access
+              </label>
+              <select 
+                value={quickAccess}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setQuickAccess(val);
+                  if (val === 'tonight') setFormatDates(0, 1);
+                  else if (val === 'tomorrow') setFormatDates(1, 1);
+                  else if (val === 'weekend') {
+                    const d = new Date(); const day = d.getDay();
+                    const daysToFriday = day <= 5 ? 5 - day : 6;
+                    setFormatDates(daysToFriday, 2);
+                  }
+                }}
+                className="p-2 border border-black/10 text-xs font-sans uppercase tracking-widest font-semibold focus:outline-none focus:border-chalet-gold bg-chalet-bg h-9 w-40 cursor-pointer"
+              >
+                <option value="">Select Option...</option>
+                <option value="tonight">Tonight</option>
+                <option value="tomorrow">Tomorrow</option>
+                <option value="weekend">This Weekend</option>
+              </select>
+            </div>
+
+            <div className="w-px h-8 bg-black/5 self-center mx-2 hidden md:block" />
+
+            {/* Date Range Selection */}
+            <div className="flex items-end gap-2">
+              <div className="flex flex-col">
+                <label className="text-[9px] uppercase tracking-widest text-chalet-gray font-bold mb-1 ml-1">Check-in</label>
+                <input type="date" min={getToday()} value={dates.checkIn} onChange={e => setDates(d => ({...d, checkIn: e.target.value}))} 
+                  className="p-2 border border-black/10 text-xs focus:outline-none focus:border-chalet-gold w-36 h-9" />
+              </div>
+              <span className="text-chalet-gray pb-2">—</span>
+              <div className="flex flex-col">
+                <label className="text-[9px] uppercase tracking-widest text-chalet-gray font-bold mb-1 ml-1">Check-out</label>
+                <input type="date" min={dates.checkIn || getTomorrow()} value={dates.checkOut} onChange={e => setDates(d => ({...d, checkOut: e.target.value}))} 
+                  className="p-2 border border-black/10 text-xs focus:outline-none focus:border-chalet-gold w-36 h-9" />
+              </div>
+            </div>
+
+            <div className="w-px h-8 bg-black/5 self-center mx-2 hidden md:block" />
+
+            {/* Category Dropdown */}
+            <div className="flex flex-col">
+              <label className="text-[9px] uppercase tracking-widest text-chalet-gray font-bold mb-1 ml-1">Category</label>
+              <select 
+                value={selectedCategory}
+                onChange={(e) => setSelectedCategory(e.target.value)}
+                className="p-2 border border-black/10 text-xs font-sans uppercase tracking-widest font-semibold focus:outline-none focus:border-chalet-gold bg-chalet-bg h-9 w-44 cursor-pointer"
+              >
+                {uniqueCategories.map(cat => (
+                  <option key={cat} value={cat}>{cat}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Actions */}
+            <div className="flex items-center gap-3">
+              <button onClick={handleDateSearch} className="bg-chalet-dark text-white px-6 h-9 hover:bg-chalet-gold transition-colors flex items-center justify-center gap-2 text-[10px] font-bold uppercase tracking-widest">
+                <Search className="w-3.5 h-3.5" /> Find Rooms
+              </button>
+              <span className="text-[10px] font-sans font-bold uppercase tracking-[0.2em] text-chalet-gray/60 whitespace-nowrap ml-4">
+                {filteredRooms.length} room{filteredRooms.length !== 1 ? 's' : ''}
               </span>
-              <button onClick={() => setFormatDates(0, 1)} className="px-4 py-2 text-[10px] font-bold uppercase tracking-widest border border-black/10 hover:border-chalet-gold hover:text-chalet-gold transition-colors bg-chalet-bg">
-                Tonight
-              </button>
-              <button onClick={() => setFormatDates(1, 1)} className="px-4 py-2 text-[10px] font-bold uppercase tracking-widest border border-black/10 hover:border-chalet-gold hover:text-chalet-gold transition-colors bg-chalet-bg">
-                Tomorrow
-              </button>
-              <button onClick={() => {
-                const d = new Date(); const day = d.getDay();
-                const daysToFriday = day <= 5 ? 5 - day : 6;
-                setFormatDates(daysToFriday, 2);
-              }} className="px-4 py-2 text-[10px] font-bold uppercase tracking-widest border border-black/10 hover:border-chalet-gold hover:text-chalet-gold transition-colors bg-chalet-bg hidden sm:block">
-                This Weekend
-              </button>
             </div>
 
-            <div className="flex items-center gap-2 w-full md:w-auto">
-              <input type="date" min={getToday()} value={dates.checkIn} onChange={e => setDates(d => ({...d, checkIn: e.target.value}))} 
-                className="p-2 border border-black/10 text-xs focus:outline-none focus:border-chalet-gold w-full md:w-32" />
-              <span className="text-chalet-gray">—</span>
-              <input type="date" min={dates.checkIn || getTomorrow()} value={dates.checkOut} onChange={e => setDates(d => ({...d, checkOut: e.target.value}))} 
-                className="p-2 border border-black/10 text-xs focus:outline-none focus:border-chalet-gold w-full md:w-32" />
-              <button onClick={handleDateSearch} className="bg-chalet-dark text-white p-2 hover:bg-chalet-gold transition-colors flex items-center justify-center shrink-0">
-                <Search className="w-4 h-4" />
-              </button>
-            </div>
           </div>
-
-          {/* Category Filters */}
-          <div className="flex overflow-x-auto hide-scrollbar px-2 sm:px-6">
-            {uniqueCategories.map(cat => (
-              <button key={cat} onClick={() => setSelectedCategory(cat)}
-                className={`flex-shrink-0 px-6 py-5 text-[11px] font-sans font-semibold uppercase tracking-[0.2em] transition-all duration-300 border-b-2
-                  ${selectedCategory === cat 
-                    ? 'border-chalet-gold text-chalet-dark' 
-                    : 'border-transparent text-chalet-gray hover:text-chalet-dark'}`
-                }>
-                {cat}
-              </button>
-            ))}
-          </div>
-        </div>
-        <div className="max-w-7xl mx-auto px-6 py-6 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <span className="text-[11px] font-sans uppercase tracking-widest text-chalet-gray shrink-0 self-start sm:self-center">
-            {filteredRooms.length} room{filteredRooms.length !== 1 ? 's' : ''} found
-          </span>
         </div>
       </div>
 

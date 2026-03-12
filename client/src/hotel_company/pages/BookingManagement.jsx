@@ -59,6 +59,7 @@ const BookingManagement = () => {
   const [guests, setGuests] = useState([]);
   const [rooms, setRooms] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [roomLoading, setRoomLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
 
@@ -127,7 +128,23 @@ const BookingManagement = () => {
   };
 
   // ── Computed ────────────────────────────────────────────────────────────────
-  const availableRooms = useMemo(() => rooms.filter(r => r.status === 'Available'), [rooms]);
+  const availableRooms = useMemo(() => {
+    // If we have an isReserved flag from backend (date search), use it.
+    // Otherwise fallback to status.
+    return rooms.filter(r => {
+      const isReserved = r.isReserved;
+      const isMaintenance = r.status === 'Under maintenance';
+      const isOccupied = r.status === 'Occupied';
+      
+      // If dates are selected, we trust isReserved flag.
+      if (bookingForm.checkInDate && bookingForm.checkOutDate) {
+        return !isReserved && !isMaintenance;
+      }
+      
+      // Default dashboard view: only "Available" status
+      return r.status === 'Available';
+    });
+  }, [rooms, bookingForm.checkInDate, bookingForm.checkOutDate]);
 
   const totalAmount = useMemo(() => {
     if (!bookingForm.roomIds.length || !bookingForm.checkInDate || !bookingForm.checkOutDate) return 0;
@@ -160,10 +177,43 @@ const BookingManagement = () => {
 
   useEffect(() => { setCurrentPage(1); }, [searchTerm, statusFilter, activeTab]);
 
+  // Re-fetch rooms with availability check if dates change in the booking modal
+  useEffect(() => {
+    if (isBookingModalOpen && bookingForm.checkInDate && bookingForm.checkOutDate) {
+      setRoomLoading(true);
+      const timer = setTimeout(async () => {
+        try {
+          const { data } = await api.fetchRooms({
+            startDate: bookingForm.checkInDate,
+            endDate: bookingForm.checkOutDate
+          });
+          setRooms(data);
+        } catch (err) {
+          console.error('Failed to fetch rooms for dates:', err);
+        } finally {
+          setRoomLoading(false);
+        }
+      }, 500); // Debounce to avoid too many requests while typing dates
+      return () => clearTimeout(timer);
+    } else if (!isBookingModalOpen) {
+      // Refresh to default rooms when modal closes to restore dashboard stats
+      loadAll();
+    }
+  }, [bookingForm.checkInDate, bookingForm.checkOutDate, isBookingModalOpen]);
+
   // ── Booking Handlers ────────────────────────────────────────────────────────
   const openNewBooking = () => {
+    const today = new Date().toISOString().split('T')[0];
+    const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0];
+    
     setEditingBooking(null);
-    setBookingForm({ guestId: '', roomIds: [], checkInDate: '', checkOutDate: '', specialRequests: '' });
+    setBookingForm({ 
+      guestId: '', 
+      roomIds: [], 
+      checkInDate: today, 
+      checkOutDate: tomorrow, 
+      specialRequests: '' 
+    });
     setGuestSearch('');
     setModalGuestTab('select');
     setInlineGuestForm({ firstName: '', lastName: '', email: '', phone: '', idType: '', idNumber: '' });
@@ -747,209 +797,242 @@ const BookingManagement = () => {
       )}
       {isBookingModalOpen && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-[var(--theme-header-bg)] border-none rounded-xl w-full max-w-2xl shadow-2xl animate-in zoom-in duration-300 flex flex-col max-h-[90vh]">
-            <div className="p-8 border-b border-[var(--border)] flex justify-between items-center bg-[var(--theme-bg)]/50 flex-shrink-0">
-              <div>
-                <h2 className="text-2xl font-semibold text-[var(--theme-text)] italic uppercase">
-                  {editingBooking ? 'Edit Reservation' : 'New Reservation'}
-                </h2>
-                {totalAmount > 0 && (
-                  <p className="text-sm font-normal text-[var(--theme-primary)] mt-1">
-                    Estimated Total: ETB {totalAmount.toFixed(2)}
-                  </p>
-                )}
-              </div>
-              <button onClick={() => setIsBookingModalOpen(false)} className="text-[var(--theme-text)] opacity-40 hover:opacity-100">
+          <div className="bg-[var(--theme-header-bg)] border-none rounded-2xl w-full max-w-xl shadow-2xl animate-in zoom-in duration-300 flex flex-col max-h-[90vh] overflow-hidden">
+            <div className="p-5 border-b border-[var(--border)] flex justify-between items-center bg-[var(--theme-bg)]/50 flex-shrink-0">
+              <h2 className="text-xl font-bold text-[var(--theme-text)] italic uppercase">
+                {editingBooking ? 'Edit Reservation' : 'New Reservation'}
+              </h2>
+              {totalAmount > 0 && (
+                <p className="text-sm font-normal text-[var(--theme-primary)] mt-1">
+                  Estimated Total: ETB {totalAmount.toFixed(2)}
+                </p>
+              )}
+              <button onClick={() => setIsBookingModalOpen(false)} className="text-[var(--theme-text)] opacity-30 hover:opacity-100 transition-opacity">
                 <XCircle className="h-6 w-6" />
               </button>
             </div>
-            <form onSubmit={handleBookingSubmit} className="p-8 space-y-6 overflow-y-auto">
-              {/* ── Guest Section with tabs ── */}
-              {!editingBooking ? (
-                <div className="space-y-3">
-                  {/* Mini tab switcher */}
-                  <div className="flex items-center gap-1 bg-[var(--theme-bg)] p-1 rounded-xl w-fit">
-                    <button type="button"
-                      onClick={() => setModalGuestTab('select')}
-                      className={`px-4 py-1.5 rounded-lg text-[10px] font-semibold uppercase tracking-widest transition-all ${
-                        modalGuestTab === 'select' ? 'bg-[var(--theme-header-bg)] shadow text-[var(--theme-text)]' : 'text-[var(--theme-text)] opacity-40 hover:opacity-60'
-                      }`}>
-                      Select Guest
-                    </button>
-                    <button type="button"
-                      onClick={() => setModalGuestTab('add')}
-                      className={`px-4 py-1.5 rounded-lg text-[10px] font-semibold uppercase tracking-widest transition-all ${
-                        modalGuestTab === 'add' ? 'bg-[var(--theme-header-bg)] shadow text-[var(--theme-text)]' : 'text-[var(--theme-text)] opacity-40 hover:opacity-60'
-                      }`}>
-                      + Add Guest
-                    </button>
-                  </div>
-
-                  {/* Select Guest panel */}
-                  {modalGuestTab === 'select' && (
-                    <div className="space-y-2">
-                      <Input
-                        placeholder="Search guest by name..."
-                        value={guestSearch}
-                        onChange={e => { setGuestSearch(e.target.value); setBookingForm(p => ({ ...p, guestId: '' })); }}
-                        className="rounded-xl"
-                      />
-                      {guestSearch && !bookingForm.guestId && (
-                        <div className="border border-gray-100 rounded-xl overflow-hidden shadow-sm max-h-36 overflow-y-auto">
-                          {filteredGuestSearch.slice(0, 6).map(g => (
-                            <button key={g.id} type="button"
-                              onClick={() => { setBookingForm(p => ({ ...p, guestId: g.id })); setGuestSearch(`${g.firstName} ${g.lastName}`); }}
-                              className="w-full text-left px-4 py-2.5 hover:bg-gray-50 text-sm font-medium text-gray-700 border-b border-gray-50 last:border-0">
-                              <span className="font-normal">{g.firstName} {g.lastName}</span>
-                              <span className="text-gray-400 text-xs ml-2">{g.email}</span>
-                            </button>
-                          ))}
-                          {filteredGuestSearch.length === 0 && (
-                            <div className="px-4 py-3 text-xs text-gray-400 font-medium flex items-center justify-between">
-                              <span>No guests found.</span>
-                              <button type="button" onClick={() => setModalGuestTab('add')}
-                                className="text-[var(--theme-primary)] font-semibold hover:underline">+ Add Guest</button>
-                            </div>
-                          )}
-                        </div>
-                      )}
-                      {bookingForm.guestId && (
-                        <p className="text-xs text-green-600 font-normal flex items-center gap-1">
-                          <CheckCircle2 className="h-3 w-3" /> Guest selected
-                        </p>
-                      )}
+            
+            <form onSubmit={handleBookingSubmit} className="flex flex-col flex-1 overflow-hidden">
+              <div className="p-6 space-y-6 overflow-y-auto flex-1 thin-scrollbar">
+                {/* ── Guest Section with tabs ── */}
+                {!editingBooking ? (
+                  <div className="space-y-3">
+                    {/* Mini tab switcher */}
+                    <div className="flex items-center gap-1 bg-[var(--theme-bg)] p-1 rounded-xl w-fit">
+                      <button type="button"
+                        onClick={() => setModalGuestTab('select')}
+                        className={`px-3 py-1.5 rounded-lg text-[10px] font-semibold uppercase tracking-widest transition-all ${
+                          modalGuestTab === 'select' ? 'bg-[var(--theme-header-bg)] shadow text-[var(--theme-text)]' : 'text-[var(--theme-text)] opacity-40 hover:opacity-60'
+                        }`}>
+                        Select Guest
+                      </button>
+                      <button type="button"
+                        onClick={() => setModalGuestTab('add')}
+                        className={`px-3 py-1.5 rounded-lg text-[10px] font-semibold uppercase tracking-widest transition-all ${
+                          modalGuestTab === 'add' ? 'bg-[var(--theme-header-bg)] shadow text-[var(--theme-text)]' : 'text-[var(--theme-text)] opacity-40 hover:opacity-60'
+                        }`}>
+                        + Add Guest
+                      </button>
                     </div>
-                  )}
 
-                  {/* Add Guest panel */}
-                  {modalGuestTab === 'add' && (
-                    <div className="bg-gray-50 rounded-2xl p-5 space-y-4">
-                      <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400">New Guest Details</p>
-                      <div className="grid grid-cols-2 gap-3">
-                        <div className="space-y-1">
-                          <label className="text-[9px] font-semibold uppercase text-gray-400">First Name *</label>
-                          <Input required value={inlineGuestForm.firstName}
-                            onChange={e => setInlineGuestForm(p => ({ ...p, firstName: e.target.value }))}
-                            className="rounded-xl h-9 text-sm" placeholder="First name" />
-                        </div>
-                        <div className="space-y-1">
-                          <label className="text-[9px] font-semibold uppercase text-gray-400">Last Name *</label>
-                          <Input required value={inlineGuestForm.lastName}
-                            onChange={e => setInlineGuestForm(p => ({ ...p, lastName: e.target.value }))}
-                            className="rounded-xl h-9 text-sm" placeholder="Last name" />
-                        </div>
-                      </div>
-                      <div className="space-y-1">
-                        <label className="text-[9px] font-semibold uppercase text-gray-400">Email *</label>
-                        <Input type="email" required value={inlineGuestForm.email}
-                          onChange={e => setInlineGuestForm(p => ({ ...p, email: e.target.value }))}
-                          className="rounded-xl h-9 text-sm" placeholder="email@example.com" />
-                      </div>
-                      <div className="space-y-1">
-                        <label className="text-[9px] font-semibold uppercase text-gray-400">Phone *</label>
-                        <Input required value={inlineGuestForm.phone}
-                          onChange={e => setInlineGuestForm(p => ({ ...p, phone: e.target.value }))}
-                          className="rounded-xl h-9 text-sm" placeholder="+1 234 567 890" />
-                      </div>
-                      <div className="grid grid-cols-2 gap-3">
-                        <div className="space-y-1">
-                          <label className="text-[9px] font-semibold uppercase text-[var(--theme-text)] opacity-40">ID Type</label>
-                          <select value={inlineGuestForm.idType}
-                            onChange={e => setInlineGuestForm(p => ({ ...p, idType: e.target.value }))}
-                            className="w-full h-9 px-3 bg-[var(--theme-header-bg)] rounded-xl text-sm outline-none border border-[var(--border)] text-[var(--theme-text)]">
-                            <option value="">None</option>
-                            <option value="Passport">Passport</option>
-                            <option value="National ID">National ID</option>
-                            <option value="Driver License">Driver License</option>
-                          </select>
-                        </div>
-                        <div className="space-y-1">
-                          <label className="text-[9px] font-semibold uppercase text-[var(--theme-text)] opacity-40">ID Number</label>
-                          <Input value={inlineGuestForm.idNumber}
-                            onChange={e => setInlineGuestForm(p => ({ ...p, idNumber: e.target.value }))}
-                            className="rounded-xl h-9 text-sm" placeholder="ID number" />
-                        </div>
-                      </div>
-                      <Button type="button" onClick={handleInlineGuestCreate}
-                        className="w-full h-10 bg-[var(--theme-primary)] text-white font-semibold uppercase tracking-widest rounded-xl text-xs">
-                        Save Guest & Select
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              ) : (
-                /* Edit mode: just show the guest name, not editable */
-                <div className="space-y-2">
-                  <label className="text-[10px] font-semibold uppercase text-[var(--theme-text)] opacity-40 tracking-widest">Guest</label>
-                  <Input value={guestSearch} disabled className="rounded-xl bg-[var(--theme-bg)]" />
-                </div>
-              )}
-
-              {/* Date Range */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label className="text-[10px] font-semibold uppercase text-[var(--theme-text)] opacity-40 tracking-widest">Check-In Date</label>
-                  <Input type="date" required value={bookingForm.checkInDate}
-                    onChange={e => setBookingForm(p => ({ ...p, checkInDate: e.target.value }))}
-                    className="rounded-xl" />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-[10px] font-semibold uppercase text-[var(--theme-text)] opacity-40 tracking-widest">Check-Out Date</label>
-                  <Input type="date" required value={bookingForm.checkOutDate}
-                    min={bookingForm.checkInDate}
-                    onChange={e => setBookingForm(p => ({ ...p, checkOutDate: e.target.value }))}
-                    className="rounded-xl" />
-                </div>
-              </div>
-
-              {/* Room Selector (only for new bookings) */}
-              {!editingBooking && (
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <label className="text-[10px] font-semibold uppercase text-[var(--theme-text)] opacity-40 tracking-widest">
-                      Select Rooms <span className="text-[var(--theme-text)] opacity-30">({availableRooms.length} available)</span>
-                    </label>
-                    {bookingForm.roomIds.length > 0 && (
-                      <span className="text-[10px] font-semibold text-[var(--theme-primary)]">{bookingForm.roomIds.length} selected</span>
-                    )}
-                  </div>
-                  <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto pr-1">
-                    {availableRooms.map(room => {
-                      const selected = bookingForm.roomIds.includes(room.id);
-                      return (
-                        <button key={room.id} type="button" onClick={() => toggleRoom(room.id)}
-                          className={`flex items-center gap-3 p-3 rounded-xl border-2 text-left transition-all ${selected ? 'border-[var(--theme-primary)] bg-[var(--theme-primary)]/5' : 'border-[var(--border)] hover:border-[var(--theme-primary)]/30'}`}>
-                          <Bed className={`h-4 w-4 flex-shrink-0 ${selected ? 'text-[var(--theme-primary)]' : 'text-[var(--theme-text)] opacity-30'}`} />
-                          <div>
-                            <p className={`text-xs font-semibold ${selected ? 'text-[var(--theme-primary)]' : 'text-[var(--theme-text)] opacity-80'}`}>Room #{room.roomNumber}</p>
-                            <p className="text-[9px] text-[var(--theme-text)] opacity-40 font-medium">{room.RoomType?.name} · ETB {room.RoomType?.basePrice}/night</p>
+                    {/* Select Guest panel */}
+                    {modalGuestTab === 'select' && (
+                      <div className="space-y-2">
+                        <Input
+                          placeholder="Search guest by name..."
+                          value={guestSearch}
+                          onChange={e => { setGuestSearch(e.target.value); setBookingForm(p => ({ ...p, guestId: '' })); }}
+                          className="rounded-xl"
+                        />
+                        {guestSearch && !bookingForm.guestId && (
+                          <div className="border border-gray-100 rounded-xl overflow-hidden shadow-sm max-h-36 overflow-y-auto">
+                            {filteredGuestSearch.slice(0, 6).map(g => (
+                              <button key={g.id} type="button"
+                                onClick={() => { setBookingForm(p => ({ ...p, guestId: g.id })); setGuestSearch(`${g.firstName} ${g.lastName}`); }}
+                                className="w-full text-left px-4 py-2.5 hover:bg-gray-50 text-sm font-medium text-gray-700 border-b border-gray-50 last:border-0">
+                                <span className="font-normal">{g.firstName} {g.lastName}</span>
+                                <span className="text-gray-400 text-xs ml-2">{g.email}</span>
+                              </button>
+                            ))}
+                            {filteredGuestSearch.length === 0 && (
+                              <div className="px-4 py-3 text-xs text-gray-400 font-medium flex items-center justify-between">
+                                <span>No guests found.</span>
+                                <button type="button" onClick={() => setModalGuestTab('add')}
+                                  className="text-[var(--theme-primary)] font-semibold hover:underline">+ Add Guest</button>
+                              </div>
+                            )}
                           </div>
-                          {selected && <CheckCircle2 className="h-4 w-4 text-[var(--theme-primary)] ml-auto" />}
-                        </button>
-                      );
-                    })}
-                    {availableRooms.length === 0 && (
-                      <p className="col-span-2 text-center py-6 text-xs text-[var(--theme-text)] opacity-40 font-normal uppercase tracking-widest">No available rooms</p>
+                        )}
+                        {bookingForm.guestId && (
+                          <p className="text-xs text-green-600 font-normal flex items-center gap-1">
+                            <CheckCircle2 className="h-3 w-3" /> Guest selected
+                          </p>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Add Guest panel */}
+                    {modalGuestTab === 'add' && (
+                      <div className="bg-gray-50 rounded-2xl p-5 space-y-4">
+                        <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400">New Guest Details</p>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="space-y-1">
+                            <label className="text-[9px] font-semibold uppercase text-gray-400">First Name *</label>
+                            <Input required value={inlineGuestForm.firstName}
+                              onChange={e => setInlineGuestForm(p => ({ ...p, firstName: e.target.value }))}
+                              className="rounded-xl h-9 text-sm" placeholder="First name" />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-[9px] font-semibold uppercase text-gray-400">Last Name *</label>
+                            <Input required value={inlineGuestForm.lastName}
+                              onChange={e => setInlineGuestForm(p => ({ ...p, lastName: e.target.value }))}
+                              className="rounded-xl h-9 text-sm" placeholder="Last name" />
+                          </div>
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[9px] font-semibold uppercase text-gray-400">Email *</label>
+                          <Input type="email" required value={inlineGuestForm.email}
+                            onChange={e => setInlineGuestForm(p => ({ ...p, email: e.target.value }))}
+                            className="rounded-xl h-9 text-sm" placeholder="email@example.com" />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[9px] font-semibold uppercase text-gray-400">Phone *</label>
+                          <Input required value={inlineGuestForm.phone}
+                            onChange={e => setInlineGuestForm(p => ({ ...p, phone: e.target.value }))}
+                            className="rounded-xl h-9 text-sm" placeholder="+1 234 567 890" />
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="space-y-1">
+                            <label className="text-[9px] font-semibold uppercase text-[var(--theme-text)] opacity-40">ID Type</label>
+                            <select value={inlineGuestForm.idType}
+                              onChange={e => setInlineGuestForm(p => ({ ...p, idType: e.target.value }))}
+                              className="w-full h-9 px-3 bg-[var(--theme-header-bg)] rounded-xl text-sm outline-none border border-[var(--border)] text-[var(--theme-text)]">
+                              <option value="">None</option>
+                              <option value="Passport">Passport</option>
+                              <option value="National ID">National ID</option>
+                              <option value="Driver License">Driver License</option>
+                            </select>
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-[9px] font-semibold uppercase text-[var(--theme-text)] opacity-40">ID Number</label>
+                            <Input value={inlineGuestForm.idNumber}
+                              onChange={e => setInlineGuestForm(p => ({ ...p, idNumber: e.target.value }))}
+                              className="rounded-xl h-9 text-sm" placeholder="ID number" />
+                          </div>
+                        </div>
+                        <Button type="button" onClick={handleInlineGuestCreate}
+                          className="w-full h-10 bg-[var(--theme-primary)] text-white font-semibold uppercase tracking-widest rounded-xl text-xs">
+                          Save Guest & Select
+                        </Button>
+                      </div>
                     )}
                   </div>
-                </div>
-              )}
+                ) : (
+                  /* Edit mode: just show the guest name, not editable */
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-semibold uppercase text-[var(--theme-text)] opacity-40 tracking-widest">Guest</label>
+                    <Input value={guestSearch} disabled className="rounded-xl bg-[var(--theme-bg)]" />
+                  </div>
+                )}
 
-              {/* Special Requests */}
-              <div className="space-y-2">
-                <label className="text-[10px] font-semibold uppercase text-[var(--theme-text)] opacity-40 tracking-widest">Special Requests</label>
-                <textarea
-                  rows={3}
-                  value={bookingForm.specialRequests}
-                  onChange={e => setBookingForm(p => ({ ...p, specialRequests: e.target.value }))}
-                  placeholder="Any special requirements..."
-                  className="w-full px-4 py-3 bg-[var(--theme-bg)] rounded-xl text-sm text-[var(--theme-text)] outline-none resize-none focus:ring-2 focus:ring-[var(--theme-primary)]/20 transition-all border-none"
-                />
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-semibold uppercase text-[var(--theme-text)] opacity-40 tracking-widest">Check-In Date</label>
+                      <Input type="date" required value={bookingForm.checkInDate}
+                        onChange={e => {
+                          const newDate = e.target.value;
+                          setBookingForm(p => {
+                            let s = newDate;
+                            let e = p.checkOutDate;
+                            
+                            // If checkout exists and is before/equal new checkin, decide whether to swap or clear
+                            if (e && e <= s) {
+                              // If they pick a date that makes the range invalid, 
+                              // we follow the rolling logic: old checkin becomes start, but here it's easier to just swap
+                              [s, e] = [e, s];
+                            }
+                            
+                            return { ...p, checkInDate: s, checkOutDate: e };
+                          });
+                        }}
+                        className="rounded-xl" />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-semibold uppercase text-[var(--theme-text)] opacity-40 tracking-widest">Check-Out Date</label>
+                      <Input type="date" required value={bookingForm.checkOutDate}
+                        min={bookingForm.checkInDate}
+                        onChange={e => {
+                          const newDate = e.target.value;
+                          setBookingForm(p => {
+                            let s = p.checkInDate;
+                            let end = newDate;
+                            
+                            if (s && end <= s) {
+                              [s, end] = [end, s];
+                            }
+                            
+                            return { ...p, checkInDate: s, checkOutDate: end };
+                          });
+                        }}
+                      className="rounded-xl" />
+                  </div>
+                </div>
+
+                {/* Room Selector (only for new bookings) */}
+                {!editingBooking && (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <label className="text-[10px] font-semibold uppercase text-[var(--theme-text)] opacity-40 tracking-widest">
+                        Select Rooms {roomLoading ? (
+                          <span className="animate-pulse text-blue-500">(Checking availability...)</span>
+                        ) : (
+                          <span className="text-[var(--theme-text)] opacity-30">({availableRooms.length} available)</span>
+                        )}
+                      </label>
+                      {bookingForm.roomIds.length > 0 && (
+                        <span className="text-[10px] font-semibold text-[var(--theme-primary)]">{bookingForm.roomIds.length} selected</span>
+                      )}
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto pr-1 thin-scrollbar">
+                      {availableRooms.map(room => {
+                        const selected = bookingForm.roomIds.includes(room.id);
+                        return (
+                          <button key={room.id} type="button" onClick={() => toggleRoom(room.id)}
+                            className={`flex items-center gap-3 p-3 rounded-xl border-2 text-left transition-all ${selected ? 'border-[var(--theme-primary)] bg-[var(--theme-primary)]/5' : 'border-[var(--border)] hover:border-[var(--theme-primary)]/30'}`}>
+                            <Bed className={`h-4 w-4 flex-shrink-0 ${selected ? 'text-[var(--theme-primary)]' : 'text-[var(--theme-text)] opacity-30'}`} />
+                            <div>
+                              <p className={`text-xs font-semibold ${selected ? 'text-[var(--theme-primary)]' : 'text-[var(--theme-text)] opacity-80'}`}>Room #{room.roomNumber}</p>
+                              <p className="text-[9px] text-[var(--theme-text)] opacity-40 font-medium">{room.RoomType?.name} · ETB {room.RoomType?.basePrice}/night</p>
+                            </div>
+                            {selected && <CheckCircle2 className="h-4 w-4 text-[var(--theme-primary)] ml-auto" />}
+                          </button>
+                        );
+                      })}
+                      {availableRooms.length === 0 && (
+                        <p className="col-span-2 text-center py-6 text-xs text-[var(--theme-text)] opacity-40 font-normal uppercase tracking-widest">No available rooms</p>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Special Requests */}
+                <div className="space-y-2">
+                  <label className="text-[10px] font-semibold uppercase text-[var(--theme-text)] opacity-40 tracking-widest">Special Requests</label>
+                  <textarea
+                    rows={3}
+                    value={bookingForm.specialRequests}
+                    onChange={e => setBookingForm(p => ({ ...p, specialRequests: e.target.value }))}
+                    placeholder="Any special requirements..."
+                    className="w-full px-4 py-3 bg-[var(--theme-bg)] rounded-xl text-sm text-[var(--theme-text)] outline-none resize-none focus:ring-2 focus:ring-[var(--theme-primary)]/20 transition-all border-none"
+                  />
+                </div>
               </div>
 
-              <Button type="submit" className="w-full h-12 bg-[var(--theme-primary)] text-white font-semibold uppercase tracking-widest rounded-xl shadow-lg active:scale-95 transition-transform">
-                {editingBooking ? 'Update Reservation' : 'Confirm Reservation'}
-              </Button>
+              <div className="border-t border-[var(--border)] bg-[var(--theme-bg)]/50 flex-shrink-0">
+                <Button type="submit" className="w-full h-14 bg-[var(--theme-primary)] text-white font-bold uppercase tracking-widest rounded-none shadow-none active:brightness-90 transition-all">
+                  {editingBooking ? 'Update Reservation' : 'Confirm Reservation'}
+                </Button>
+              </div>
             </form>
           </div>
         </div>

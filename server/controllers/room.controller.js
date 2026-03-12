@@ -1,4 +1,4 @@
-const { Room, RoomType, Booking, BookingRoom } = require('../models');
+const { Room, RoomType, Booking, BookingRoom, Hotel } = require('../models');
 const { Op } = require('sequelize');
 
 // @desc    Get all rooms for a hotel (supports date availability filtering)
@@ -8,43 +8,55 @@ const getRooms = async (req, res) => {
     const hotelId = req.user?.hotelId || req.hotelId || req.query.hotelId;
     if (!hotelId) return res.status(400).json({ message: 'Hotel ID is required' });
 
+    const hotel = await Hotel.findByPk(hotelId);
+    const pendingDuration = hotel?.pendingReservationDuration || 60;
+    const expiryTime = new Date(Date.now() - pendingDuration * 60 * 1000);
+
     const { startDate, endDate } = req.query;
+    let reservedRoomIds = [];
 
-    let excludeRoomIds = [];
-
-    // If dates are provided, find all rooms that have an active booking overlapping these dates
+    // If dates are provided, identify rooms with overlapping bookings
     if (startDate && endDate) {
       const overlappingBookings = await Booking.findAll({
         where: {
           hotelId,
-          status: { [Op.notIn]: ['Cancelled', 'Checked Out'] },
-          // A booking overlaps if it starts before the target end date AND ends after the target start date
+          [Op.or]: [
+            { status: { [Op.in]: ['Confirmed', 'Checked In'] } },
+            {
+              [Op.and]: [
+                { status: 'Pending' },
+                { createdAt: { [Op.gt]: expiryTime } }
+              ]
+            }
+          ],
           checkInDate: { [Op.lt]: endDate },
           checkOutDate: { [Op.gt]: startDate }
         },
         include: [{ model: Room, attributes: ['id'] }]
       });
 
-      // Extract all room IDs from those overlapping bookings
       overlappingBookings.forEach(booking => {
         if (booking.Rooms) {
-          booking.Rooms.forEach(room => excludeRoomIds.push(room.id));
+          booking.Rooms.forEach(room => reservedRoomIds.push(room.id));
         }
       });
     }
 
-    // Build the query
-    const whereClause = { hotelId };
-    if (excludeRoomIds.length > 0) {
-      whereClause.id = { [Op.notIn]: excludeRoomIds };
-    }
-
     const rooms = await Room.findAll({ 
-      where: whereClause,
+      where: { hotelId },
       include: [{ model: RoomType, attributes: ['name', 'basePrice', 'capacity'] }]
     });
 
-    res.status(200).json(rooms);
+    // Map rooms to include availability status
+    const roomsWithStatus = rooms.map(room => {
+      const roomJson = room.toJSON();
+      return {
+        ...roomJson,
+        isReserved: reservedRoomIds.includes(room.id)
+      };
+    });
+
+    res.status(200).json(roomsWithStatus);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -212,10 +224,22 @@ const getRoomOccupiedDates = async (req, res) => {
     const { id } = req.params;
     const hotelId = req.user?.hotelId || req.hotelId || req.query.hotelId;
 
+    const hotel = await Hotel.findByPk(hotelId);
+    const pendingDuration = hotel?.pendingReservationDuration || 60;
+    const expiryTime = new Date(Date.now() - pendingDuration * 60 * 1000);
+
     const bookings = await Booking.findAll({
       where: {
-        status: { [Op.notIn]: ['Cancelled', 'Checked Out'] },
-        hotelId
+        hotelId,
+        [Op.or]: [
+          { status: { [Op.in]: ['Confirmed', 'Checked In'] } },
+          {
+            [Op.and]: [
+              { status: 'Pending' },
+              { createdAt: { [Op.gt]: expiryTime } }
+            ]
+          }
+        ]
       },
       include: [{
         model: Room,

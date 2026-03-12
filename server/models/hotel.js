@@ -30,7 +30,12 @@ module.exports = (sequelize, DataTypes) => {
     email: DataTypes.STRING,
     active: DataTypes.BOOLEAN,
     apiKey: DataTypes.STRING,
-    allowedUrls: DataTypes.TEXT // Storing as JSON string
+    allowedUrls: DataTypes.TEXT, // Storing as JSON string
+    pendingReservationDuration: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      defaultValue: 60
+    }
   }, {
     sequelize,
     modelName: 'Hotel',

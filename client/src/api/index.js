@@ -52,7 +52,7 @@ export const updateRoomType = (id, updatedRoomType) => API.put(`/room-types/${id
 export const deleteRoomType = (id) => API.delete(`/room-types/${id}`);
 
 // Rooms
-export const fetchRooms = () => API.get('/rooms');
+export const fetchRooms = (params) => API.get('/rooms', { params });
 export const createRoom = (newRoom) => API.post('/rooms', newRoom);
 export const updateRoom = (id, updatedRoom) => API.put(`/rooms/${id}`, updatedRoom);
 export const updateRoomStatus = (id, status) => API.patch(`/rooms/${id}/status`, { status });

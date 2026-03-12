@@ -1,7 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { apiPost, apiFetch } from '../lib/api';
 import apiConfig from '../config/apiConfig';
 import { getUserId, getGuestData, saveGuestData } from '../lib/storage';
+import CalendarPicker from './CalendarPicker';
+import { toast } from 'sonner';
 
 const STEPS = ['Guest Info', 'ID Upload', 'Stay Details', 'Payment'];
 
@@ -48,6 +50,7 @@ export default function ReservationModal({ room, initialDates, onClose }) {
   const [banks, setBanks] = useState([]);
   const [occupiedDates, setOccupiedDates] = useState([]);
   const [fetchingOccupied, setFetchingOccupied] = useState(true);
+  const modalBodyRef = useRef(null);
 
   const today = new Date().toISOString().split('T')[0];
   const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0];
@@ -76,14 +79,32 @@ export default function ReservationModal({ room, initialDates, onClose }) {
     receipt: '',
   });
 
+  const getSuggestion = (dateStr) => {
+    if (!dateStr) return '';
+    const d = new Date(dateStr);
+    d.setDate(d.getDate() + 1);
+    const pad = n => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+  };
+
+  const effectiveCheckOut = dates.checkOutDate || getSuggestion(dates.checkInDate);
+
   const nights = Math.max(
     1,
-    Math.ceil((new Date(dates.checkOutDate) - new Date(dates.checkInDate)) / 86400000)
+    Math.ceil((new Date(effectiveCheckOut) - new Date(dates.checkInDate)) / 86400000)
   );
   const pricePerNight = parseFloat(
     room.pricePerNight || room.price || room.RoomType?.basePrice || 0
   );
   const totalPrice = (pricePerNight * nights).toFixed(2);
+
+  // ── Auto-scroll to top on error ──
+  useEffect(() => {
+    if (error && modalBodyRef.current) {
+      modalBodyRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+      toast.error(error);
+    }
+  }, [error]);
 
   useEffect(() => {
     const fetchBanks = async () => {
@@ -140,7 +161,12 @@ export default function ReservationModal({ room, initialDates, onClose }) {
 
   const validateStep2 = () => {
     const start = new Date(dates.checkInDate);
-    const end = new Date(dates.checkOutDate);
+    const end = new Date(effectiveCheckOut);
+
+    if (!dates.checkInDate) {
+      setError('Please select a check-in date.');
+      return false;
+    }
 
     if (end <= start) {
       setError('Check-out date must be after check-in date.');
@@ -149,8 +175,8 @@ export default function ReservationModal({ room, initialDates, onClose }) {
 
     // Check for overlaps with already booked dates
     const hasOverlap = occupiedDates.some(range => {
-      const busyStart = new Date(range.checkInDate);
-      const busyEnd = new Date(range.checkOutDate);
+      const busyStart = new Date(range.checkInDate || range.startDate);
+      const busyEnd = new Date(range.checkOutDate || range.endDate);
       return start < busyEnd && end > busyStart;
     });
 
@@ -195,7 +221,7 @@ export default function ReservationModal({ room, initialDates, onClose }) {
         guestId: guestData.id,
         roomIds: [room.id],
         checkInDate: dates.checkInDate,
-        checkOutDate: dates.checkOutDate,
+        checkOutDate: effectiveCheckOut,
         specialRequests: dates.specialRequests,
         bankId: payment.bankId || null,
         paymentReceipt: payment.receipt || null,
@@ -207,6 +233,7 @@ export default function ReservationModal({ room, initialDates, onClose }) {
       
       // Save for future reference (final confirmation)
       saveGuestData(guest);
+      toast.success('Reservation successful!');
     } catch (err) {
       setError(err.message);
     } finally {
@@ -232,7 +259,7 @@ export default function ReservationModal({ room, initialDates, onClose }) {
               ['Booking ID', `#${booking.id}`],
               ['Guest', `${guest.firstName} ${guest.lastName}`],
               ['Check-in', new Date(dates.checkInDate).toLocaleDateString()],
-              ['Check-out', new Date(dates.checkOutDate).toLocaleDateString()],
+              ['Check-out', new Date(effectiveCheckOut).toLocaleDateString()],
             ].map(([l, v]) => (
               <div key={l} className="flex justify-between text-[11px] font-sans">
                 <span className="text-chalet-gray font-semibold uppercase tracking-widest">{l}</span>
@@ -267,6 +294,7 @@ export default function ReservationModal({ room, initialDates, onClose }) {
       onClick={onClose}
     >
       <div
+        ref={modalBodyRef}
         className="bg-white shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
@@ -421,55 +449,76 @@ export default function ReservationModal({ room, initialDates, onClose }) {
 
           {/* ── Step 2: Stay Details ── */}
           {step === 2 && (
-            <div className="space-y-6 bg-white p-8 border border-black/5">
-              <p className="text-[11px] font-sans font-semibold uppercase tracking-[0.2em] text-chalet-dark mb-4 border-b border-black/10 pb-2">Stay Details</p>
-              <div className="grid grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-[10px] font-sans font-semibold uppercase tracking-widest text-chalet-gray mb-1.5">Check-in *</label>
-                  <input
-                    name="checkInDate"
-                    type="date"
-                    min={today}
-                    value={dates.checkInDate}
-                    onChange={handleDateChange}
-                    className="w-full text-sm font-sans border-b border-black/10 py-2 bg-transparent focus:outline-none focus:border-chalet-gold transition-colors"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[10px] font-sans font-semibold uppercase tracking-widest text-chalet-gray mb-1.5">Check-out *</label>
-                  <input
-                    name="checkOutDate"
-                    type="date"
-                    min={dates.checkInDate || today}
-                    value={dates.checkOutDate}
-                    onChange={handleDateChange}
-                    className="w-full text-sm font-sans border-b border-black/10 py-2 bg-transparent focus:outline-none focus:border-chalet-gold transition-colors"
-                  />
+            <div className="space-y-8">
+              <div className="bg-white p-8 border border-black/5">
+                <p className="text-[11px] font-sans font-semibold uppercase tracking-[0.2em] text-chalet-dark mb-6 border-b border-black/10 pb-2">Select Your Dates</p>
+                <CalendarPicker
+                  startDate={dates.checkInDate}
+                  endDate={dates.checkOutDate}
+                  disabledDates={occupiedDates}
+                  onChange={({ checkInDate, checkOutDate }) => {
+                    setDates(prev => ({
+                      ...prev,
+                      checkInDate,
+                      checkOutDate
+                    }));
+                  }}
+                />
+              </div>
+
+              {/* Premium Stay Summary */}
+              <div className="bg-chalet-dark text-white p-8 shadow-xl relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-chalet-gold/10 rounded-full -mr-16 -mt-16 blur-3xl"></div>
+                <p className="text-[10px] font-sans font-bold uppercase tracking-[0.3em] text-chalet-gold mb-6">Stay Summary</p>
+                
+                <div className="space-y-4">
+                  <div className="flex justify-between items-end border-b border-white/10 pb-4">
+                    <div>
+                      <p className="text-[9px] uppercase tracking-widest text-white/50 mb-1">Accommodation</p>
+                      <h4 className="text-xl font-serif">Room {room.roomNumber}</h4>
+                      <p className="text-[10px] text-chalet-gold uppercase tracking-widest">{room.RoomType?.name || 'Standard'}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xl font-serif">{pricePerNight.toFixed(0)} ETB</p>
+                      <p className="text-[9px] uppercase tracking-widest text-white/40">per night</p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-8 pt-2">
+                    <div>
+                      <p className="text-[9px] uppercase tracking-widest text-white/50 mb-1">Check-in</p>
+                      <p className="text-sm font-sans font-medium">{new Date(dates.checkInDate).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })}</p>
+                    </div>
+                    <div>
+                      <p className="text-[9px] uppercase tracking-widest text-white/50 mb-1">Check-out</p>
+                      <p className="text-sm font-sans font-medium">
+                        {new Date(effectiveCheckOut).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })}
+                        {!dates.checkOutDate && <span className="text-[9px] text-chalet-gold ml-2 italic tracking-normal">(Suggested)</span>}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-between items-center pt-6 mt-4 border-t border-chalet-gold/30">
+                    <div>
+                      <p className="text-[20px] font-serif text-chalet-gold">{totalPrice} ETB</p>
+                      <p className="text-[9px] uppercase tracking-widest text-white/40">Total for {nights} night{nights !== 1 ? 's' : ''}</p>
+                    </div>
+                    <div className="px-4 py-2 bg-chalet-gold/20 border border-chalet-gold/30 text-chalet-gold text-[10px] font-bold uppercase tracking-widest">
+                      Reservation Only
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              {occupiedDates.length > 0 && (
-                <div className="bg-amber-50 border border-amber-200 p-4">
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-amber-700 mb-2">Reserved Dates for this Room:</p>
-                  <div className="flex flex-wrap gap-2">
-                    {occupiedDates.map((range, idx) => (
-                      <span key={idx} className="text-[10px] bg-white border border-amber-300 px-2 py-1 text-amber-800">
-                        {new Date(range.checkInDate).toLocaleDateString()} - {new Date(range.checkOutDate).toLocaleDateString()}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              <div className="mt-6">
-                <label className="block text-[10px] font-sans font-semibold uppercase tracking-widest text-chalet-gray mb-1.5">Special Requests</label>
+              <div className="bg-white p-8 border border-black/5">
+                <label className="block text-[10px] font-sans font-semibold uppercase tracking-widest text-chalet-gray mb-3 text-center">Special Requests</label>
                 <textarea
                   name="specialRequests"
                   value={dates.specialRequests}
                   onChange={handleDateChange}
-                  rows={3}
-                  placeholder="Any special requests or preferences..."
-                  className="w-full text-sm font-sans border border-black/10 p-4 bg-transparent placeholder:text-chalet-gray/50 focus:outline-none focus:border-chalet-gold transition-colors resize-none"
+                  rows={2}
+                  placeholder="Tell us any special requests or preferences to make your stay perfect..."
+                  className="w-full text-sm font-sans border-b border-black/10 py-2 bg-transparent placeholder:text-chalet-gray/50 focus:outline-none focus:border-chalet-gold transition-colors resize-none text-center italic"
                 />
               </div>
             </div>

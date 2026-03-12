@@ -133,6 +133,16 @@ function RoomTable({ rows }) {
               </TableCell>
             </TableRow>
           ))}
+          <TableRow className="bg-[var(--theme-primary)]/5 border-none">
+            <TableCell colSpan={9} className="px-6 py-5 font-bold text-xs uppercase italic text-[var(--theme-primary)]">
+              Grand Total Room Revenue
+            </TableCell>
+            <TableCell className="px-4 py-5 text-right">
+              <p className="font-bold text-xl text-[var(--theme-primary)] whitespace-nowrap">
+                {fmt(rows.reduce((sum, r) => sum + (parseFloat(r.totalAmount) || 0), 0))}
+              </p>
+            </TableCell>
+          </TableRow>
         </TableBody>
       </Table>
     </div>
@@ -181,6 +191,13 @@ function FoodCategoryTable({ categories, emptyMsg }) {
           </div>
         </div>
       ))}
+
+      <div className="mt-6 bg-[var(--theme-primary)]/5 rounded-xl border border-[var(--theme-primary)]/10 p-5 flex items-center justify-between">
+        <span className="font-bold text-sm uppercase italic text-[var(--theme-primary)]">Grand Total Food Revenue</span>
+        <span className="font-bold text-2xl text-[var(--theme-primary)] tracking-tight">
+          {fmt(categories.reduce((sum, cat) => sum + (parseFloat(cat.totalRevenue) || 0), 0))}
+        </span>
+      </div>
     </div>
   );
 }
@@ -270,6 +287,16 @@ function PopularItemsTable({ items }) {
               </TableCell>
             </TableRow>
           ))}
+          <TableRow className="bg-[var(--theme-primary)]/5 border-none">
+            <TableCell colSpan={3} className="pl-6 py-5 font-bold text-sm uppercase italic text-[var(--theme-primary)]">
+              Popular Items Combined Revenue
+            </TableCell>
+            <TableCell className="py-5 text-right pr-6">
+              <p className="font-bold text-xl text-[var(--theme-primary)] tracking-tight">
+                {fmt(items.reduce((sum, item) => sum + (item.totalSold * (item.MenuItem?.price || 0)), 0))}
+              </p>
+            </TableCell>
+          </TableRow>
         </TableBody>
       </Table>
     </div>

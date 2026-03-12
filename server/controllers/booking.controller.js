@@ -1,4 +1,4 @@
-const { Booking, Guest, Room, RoomType, BookingRoom, Bank, Order, OrderItem, MenuItem } = require('../models');
+const { Booking, Guest, Room, RoomType, BookingRoom, Bank, Order, OrderItem, MenuItem, Hotel } = require('../models');
 const { logActivity } = require('../utils/activityLogger');
 const { Op } = require('sequelize');
 const sequelize = require('../db');
@@ -61,6 +61,10 @@ const createBooking = async (req, res) => {
       return res.status(400).json({ message: 'Guest, rooms, and dates are required' });
     }
 
+    const hotel = await Hotel.findByPk(hotelId, { transaction: t });
+    const pendingDuration = hotel?.pendingReservationDuration || 60; // Default to 60 minutes
+    const expiryTime = new Date(Date.now() - pendingDuration * 60 * 1000);
+
     // Verify all rooms belong to this hotel
     const rooms = await Room.findAll({
       where: { id: { [Op.in]: roomIds }, hotelId },
@@ -77,7 +81,15 @@ const createBooking = async (req, res) => {
     const overlaps = await Booking.findAll({
       where: {
         hotelId,
-        status: { [Op.notIn]: ['Cancelled', 'Checked Out'] },
+        [Op.or]: [
+          { status: { [Op.in]: ['Confirmed', 'Checked In'] } },
+          {
+            [Op.and]: [
+              { status: 'Pending' },
+              { createdAt: { [Op.gt]: expiryTime } } // Only consider pending bookings that haven't expired
+            ]
+          }
+        ],
         checkInDate: { [Op.lt]: checkOutDate },
         checkOutDate: { [Op.gt]: checkInDate }
       },
