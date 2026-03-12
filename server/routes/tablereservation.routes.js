@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const reservationController = require('../controllers/tablereservation.controller');
-const { protect } = require('../middleware/authMiddleware');
+const { protect } = require('../middleware/auth.middleware');
 
 // Public route for website reservations
 router.post('/public', reservationController.createReservation);
