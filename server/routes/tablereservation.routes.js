@@ -15,16 +15,10 @@ const authMiddleware = (req, res, next) => {
 router.post('/public', reservationController.createReservation);
 
 // Protected routes for dashboard
-router.use(authMiddleware);
-
-router.route('/')
-  .get(reservationController.getReservations)
-  .post(reservationController.createReservation);
-
-router.route('/:id')
-  .put(reservationController.updateReservation)
-  .delete(reservationController.deleteReservation);
-
-router.patch('/:id/status', reservationController.updateStatus);
+router.get('/', authMiddleware, reservationController.getReservations);
+router.post('/', authMiddleware, reservationController.createReservation);
+router.put('/:id', authMiddleware, reservationController.updateReservation);
+router.patch('/:id/status', authMiddleware, reservationController.updateStatus);
+router.delete('/:id', authMiddleware, reservationController.deleteReservation);
 
 module.exports = router;
