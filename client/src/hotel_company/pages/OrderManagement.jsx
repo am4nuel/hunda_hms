@@ -67,6 +67,9 @@ const OrderManagement = () => {
 
   // New Order State
   const [menuItems, setMenuItems] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [menuSearchTerm, setMenuSearchTerm] = useState('');
   const [selectedItems, setSelectedItems] = useState([]);
   const [orderFormData, setOrderFormData] = useState({
     orderType: 'Dine-in',
@@ -103,14 +106,16 @@ const OrderManagement = () => {
   const loadInitialData = async () => {
     try {
       setLoading(true);
-      const [ordersRes, menuRes, tablesRes] = await Promise.all([
+      const [ordersRes, menuRes, tablesRes, categoriesRes] = await Promise.all([
         api.fetchOrders(),
         api.fetchMenuItems(),
-        api.fetchDiningTables()
+        api.fetchDiningTables(),
+        api.fetchMenuCategories()
       ]);
       setOrders(ordersRes.data);
       setMenuItems(menuRes.data);
       setTables(tablesRes.data);
+      setCategories(categoriesRes.data);
     } catch (error) {
       toast.error('Failed to load dashboard data');
     } finally {
@@ -201,6 +206,10 @@ const OrderManagement = () => {
     } else {
       setSelectedItems([...selectedItems, { menuItemId: item.id, name: item.name, price: item.price, quantity: 1, notes: '' }]);
     }
+  };
+
+  const removeItemFromOrder = (menuItemId) => {
+    setSelectedItems(selectedItems.filter(i => i.menuItemId !== menuItemId));
   };
 
   return (
@@ -585,7 +594,7 @@ const OrderManagement = () => {
       {/* New Order Modal */}
       {isOrderModalOpen && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-50 flex items-center justify-center p-0 md:p-4">
-          <div className="bg-white rounded-none md:rounded-xl w-full max-w-5xl h-full md:h-[85vh] shadow-[0_32px_64px_-12px_rgba(0,0,0,0.3)] overflow-hidden flex flex-col animate-in zoom-in-95 duration-300">
+          <div className="bg-white rounded-none md:rounded-xl w-full max-w-[1400px] h-full md:h-[95vh] shadow-[0_32px_64px_-12px_rgba(0,0,0,0.3)] overflow-hidden flex flex-col animate-in zoom-in-95 duration-300">
              <div className="p-4 md:p-8 border-b flex justify-between items-center bg-gray-50/50">
                <div>
                  <h2 className="text-3xl font-semibold text-gray-900 italic tracking-tighter uppercase">Order Terminal</h2>
@@ -596,20 +605,77 @@ const OrderManagement = () => {
 
               <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
                 {/* Menu Area */}
-                <div className="flex-1 md:w-2/3 p-4 md:p-8 overflow-y-auto bg-gray-50/30">
-                  <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 md:gap-6">
-                    {menuItems.filter(i => i.availability).map(item => (
-                      <Card key={item.id} className="group cursor-pointer hover:scale-[1.02] transition-all bg-white border-none rounded-xl overflow-hidden" onClick={() => addItemToOrder(item)}>
-                        <div className="aspect-square bg-gray-100 relative overflow-hidden">
-                          {item.image ? <img src={`http://localhost:5000${item.image}`} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" alt={item.name} /> : <div className="flex items-center justify-center h-full text-gray-300"><Utensils className="h-12 w-12" /></div>}
-                          <div className="absolute top-4 right-4"><Badge className="bg-black text-white font-semibold rounded-xl">ETB {item.price}</Badge></div>
-                        </div>
-                        <CardContent className="p-4">
-                          <h4 className="font-semibold text-sm uppercase text-black line-clamp-1">{item.name}</h4>
-                          <p className="text-[10px] opacity-40 font-normal uppercase mt-1">{item.MenuCategory?.name}</p>
-                        </CardContent>
-                      </Card>
-                    ))}
+                <div className="flex-1 md:w-2/3 p-4 md:p-8 overflow-hidden flex flex-col bg-gray-50/30">
+                  <div className="mb-6 space-y-4">
+                    <div className="relative">
+                      <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                      <Input 
+                        placeholder="Search menu items..." 
+                        className="pl-12 h-14 rounded-2xl bg-white border-none shadow-sm text-lg"
+                        value={menuSearchTerm}
+                        onChange={e => setMenuSearchTerm(e.target.value)}
+                      />
+                    </div>
+                    
+                    <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+                      <button
+                        onClick={() => setSelectedCategory('all')}
+                        className={`px-6 py-2 rounded-xl text-xs font-bold uppercase tracking-widest transition-all whitespace-nowrap ${
+                          selectedCategory === 'all' 
+                            ? 'bg-black text-white shadow-lg' 
+                            : 'bg-white text-gray-500 hover:bg-gray-100'
+                        }`}
+                      >
+                        All Items
+                      </button>
+                      {categories.map(cat => (
+                        <button
+                          key={cat.id}
+                          onClick={() => setSelectedCategory(cat.id)}
+                          className={`px-6 py-2 rounded-xl text-xs font-bold uppercase tracking-widest transition-all whitespace-nowrap ${
+                            selectedCategory === cat.id 
+                              ? 'bg-black text-white shadow-lg' 
+                              : 'bg-white text-gray-500 hover:bg-gray-100'
+                          }`}
+                        >
+                          {cat.name}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar">
+                    <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
+                      {menuItems
+                        .filter(i => i.availability)
+                        .filter(i => {
+                          const matchesSearch = i.name.toLowerCase().includes(menuSearchTerm.toLowerCase());
+                          const matchesCategory = selectedCategory === 'all' || i.categoryId === selectedCategory;
+                          return matchesSearch && matchesCategory;
+                        })
+                        .map(item => (
+                          <Card key={item.id} className="group cursor-pointer hover:scale-[1.02] transition-all bg-white border-none rounded-xl overflow-hidden shadow-sm" onClick={() => addItemToOrder(item)}>
+                            <div className="aspect-square bg-gray-100 relative overflow-hidden">
+                              {item.image ? <img src={`http://localhost:5000${item.image}`} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" alt={item.name} /> : <div className="flex items-center justify-center h-full text-gray-300"><Utensils className="h-12 w-12" /></div>}
+                              <div className="absolute top-3 right-3"><Badge className="bg-black/80 backdrop-blur-md text-white font-bold rounded-lg border-none px-2 py-1 text-[10px]">ETB {item.price}</Badge></div>
+                            </div>
+                            <CardContent className="p-4">
+                              <h4 className="font-bold text-xs uppercase text-gray-900 line-clamp-1">{item.name}</h4>
+                              <p className="text-[9px] opacity-40 font-bold uppercase mt-1 tracking-tighter">{item.MenuCategory?.name}</p>
+                            </CardContent>
+                          </Card>
+                        ))}
+                    </div>
+                    {menuItems.filter(i => i.availability).filter(i => {
+                      const matchesSearch = i.name.toLowerCase().includes(menuSearchTerm.toLowerCase());
+                      const matchesCategory = selectedCategory === 'all' || i.categoryId === selectedCategory;
+                      return matchesSearch && matchesCategory;
+                    }).length === 0 && (
+                      <div className="h-64 flex flex-col items-center justify-center text-gray-400 gap-3 opacity-40 italic">
+                        <Utensils className="h-12 w-12" />
+                        <p className="text-sm font-medium uppercase tracking-widest">No matching items found</p>
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -706,29 +772,35 @@ const OrderManagement = () => {
                     <div className="space-y-4 pt-4 border-t border-[var(--border)]/10">
                       <h3 className="text-[10px] font-semibold uppercase text-gray-400 tracking-[0.2em]">Current Cart</h3>
                       {selectedItems.map(item => (
-                        <div key={item.menuItemId} className="group">
-                           <div className="flex justify-between items-center mb-1">
-                              <div>
-                                <h4 className="font-extrabold text-[11px] uppercase text-black">{item.name}</h4>
-                                <p className="text-[10px] font-semibold text-[var(--theme-primary)]">ETB {item.price}</p>
+                        <div key={item.menuItemId} className="group animate-in fade-in slide-in-from-right-4">
+                           <div className="flex justify-between items-start mb-2 gap-3">
+                              <div className="flex-1 min-w-0">
+                                <h4 className="font-black text-[11px] uppercase text-gray-900 truncate">{item.name}</h4>
+                                <p className="text-[10px] font-bold text-[var(--theme-primary)]">ETB {item.price}</p>
                               </div>
-                              <div className="flex items-center gap-3">
-                                <div className="flex items-center gap-2 bg-gray-50 rounded-lg p-1">
+                              <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-1.5 bg-gray-50 rounded-lg p-1">
                                   <button onClick={() => {
                                       if (item.quantity > 1) {
                                         setSelectedItems(selectedItems.map(si => si.menuItemId === item.menuItemId ? {...si, quantity: si.quantity - 1} : si))
                                       } else {
-                                        setSelectedItems(selectedItems.filter(si => si.menuItemId !== item.menuItemId))
+                                        removeItemFromOrder(item.menuItemId)
                                       }
-                                  }} className="h-6 w-6 rounded-md hover:bg-white border hover:border-black flex items-center justify-center transition-all bg-white"><Minus className="h-3 w-3" /></button>
-                                  <span className="text-[10px] font-semibold w-4 text-center">{item.quantity}</span>
-                                  <button onClick={() => addItemToOrder({id: item.menuItemId, name: item.name, price: item.price})} className="h-6 w-6 rounded-md hover:bg-white border hover:border-black flex items-center justify-center transition-all bg-white"><Plus className="h-3 w-3" /></button>
+                                  }} className="h-6 w-6 rounded-md hover:bg-white border hover:border-black flex items-center justify-center transition-all bg-white shadow-sm"><Minus className="h-3 w-3" /></button>
+                                  <span className="text-[11px] font-bold w-5 text-center">{item.quantity}</span>
+                                  <button onClick={() => addItemToOrder({id: item.menuItemId, name: item.name, price: item.price})} className="h-6 w-6 rounded-md hover:bg-white border hover:border-black flex items-center justify-center transition-all bg-white shadow-sm"><Plus className="h-3 w-3" /></button>
                                 </div>
+                                <button 
+                                  onClick={() => removeItemFromOrder(item.menuItemId)}
+                                  className="h-8 w-8 rounded-xl bg-red-50 text-red-500 flex items-center justify-center hover:bg-red-500 hover:text-white transition-all shadow-sm"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </button>
                               </div>
                            </div>
                            <Input 
-                             placeholder="Special instructions..." 
-                             className="h-8 rounded-xl bg-gray-50 text-[10px] border-none italic font-normal placeholder:font-normal" 
+                             placeholder="Instructions (e.g. No onions)" 
+                             className="h-9 rounded-xl bg-gray-50 text-[10px] border-none italic font-medium placeholder:font-normal focus:bg-white transition-all" 
                              value={item.notes}
                              onChange={e => setSelectedItems(selectedItems.map(si => si.menuItemId === item.menuItemId ? {...si, notes: e.target.value} : si))}
                            />
