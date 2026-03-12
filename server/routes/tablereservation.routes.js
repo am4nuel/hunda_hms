@@ -11,6 +11,11 @@ const authMiddleware = (req, res, next) => {
   return verifyToken(req, res, next);
 };
 
+console.log('Loading Table Reservation Routes...');
+console.log('reservationController:', typeof reservationController);
+console.log('authMiddleware:', typeof authMiddleware);
+console.log('getReservations:', typeof reservationController?.getReservations);
+
 // Public route for website reservations
 router.post('/public', reservationController.createReservation);
 

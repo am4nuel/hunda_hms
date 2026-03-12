@@ -113,6 +113,7 @@ app.use('/api/activity-logs', activityLogRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/recipes', recipeRoutes);
 app.use('/api/units', unitRoutes);
+console.log('tableReservationRoutes type:', typeof tableReservationRoutes);
 app.use('/api/table-reservations', tableReservationRoutes);
 
 const { seedUnits } = require('./utils/seedUnits');
