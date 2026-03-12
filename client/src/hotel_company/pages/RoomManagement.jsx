@@ -455,14 +455,14 @@ const RoomManagement = () => {
              </div>
              <form onSubmit={handleTypeSubmit} className="p-8 space-y-6 max-h-[70vh] overflow-y-auto">
                 <div className="grid grid-cols-2 gap-6">
-                  <div className="space-y-2"><label className="text-[10px] font-semibold uppercase text-gray-400">Name</label><Input required value={typeFormData.name} onChange={e => setTypeFormData({...typeFormData, name: e.target.value})} /></div>
-                  <div className="space-y-2"><label className="text-[10px] font-semibold uppercase text-gray-400">Capacity</label><Input type="number" required value={typeFormData.capacity} onChange={e => setTypeFormData({...typeFormData, capacity: e.target.value})} /></div>
+                  <div className="space-y-2"><label className="text-[10px] font-semibold uppercase text-gray-400">Name</label><Input required placeholder="e.g. Deluxe King Suite" value={typeFormData.name} onChange={e => setTypeFormData({...typeFormData, name: e.target.value})} /></div>
+                  <div className="space-y-2"><label className="text-[10px] font-semibold uppercase text-gray-400">Capacity</label><Input type="number" required placeholder="e.g. 2" value={typeFormData.capacity} onChange={e => setTypeFormData({...typeFormData, capacity: e.target.value})} /></div>
                 </div>
-                <div className="space-y-2"><label className="text-[10px] font-semibold uppercase text-gray-400">Base Price</label><Input step="0.01" type="number" required value={typeFormData.basePrice} onChange={e => setTypeFormData({...typeFormData, basePrice: e.target.value})} /></div>
+                <div className="space-y-2"><label className="text-[10px] font-semibold uppercase text-gray-400">Base Price</label><Input step="0.01" type="number" required placeholder="e.g. 1500" value={typeFormData.basePrice} onChange={e => setTypeFormData({...typeFormData, basePrice: e.target.value})} /></div>
                 <div className="space-y-2"><label className="text-[10px] font-semibold uppercase text-gray-400">Amenities</label>
                   <div className="flex justify-between items-center mb-2"><span className="text-xs text-gray-400">Add features for this room type</span><Button size="sm" type="button" onClick={addAmenity} variant="outline" className="h-7 text-xs font-normal border-[var(--theme-primary)] text-[var(--theme-primary)]">+ Feature</Button></div>
                   <div className="grid grid-cols-2 gap-2">{typeFormData.amenities.map((a, i) => (
-                    <div key={i} className="relative group"><Input value={a} onChange={e => updateAmenity(i, e.target.value)} className="pr-8" /><X className="absolute right-2 top-1/2 -translate-y-1/2 h-3 w-3 text-gray-300 hover:text-red-500 cursor-pointer" onClick={() => removeAmenity(i)} /></div>
+                    <div key={i} className="relative group"><Input placeholder="e.g. Free Wi-Fi" value={a} onChange={e => updateAmenity(i, e.target.value)} className="pr-8" /><X className="absolute right-2 top-1/2 -translate-y-1/2 h-3 w-3 text-gray-300 hover:text-red-500 cursor-pointer" onClick={() => removeAmenity(i)} /></div>
                   ))}</div>
                 </div>
                 <Button type="submit" className="w-full h-12 bg-[var(--theme-primary)] text-white font-semibold uppercase tracking-widest">{editingType ? 'Save Changes' : 'Create Category'}</Button>
@@ -479,7 +479,7 @@ const RoomManagement = () => {
                <button onClick={() => setIsRoomModalOpen(false)} className="text-gray-400 hover:text-gray-600"><XCircle className="h-6 w-6" /></button>
              </div>
              <form onSubmit={handleRoomSubmit} className="p-8 space-y-6 overflow-y-auto">
-                <div className="space-y-2"><label className="text-[10px] font-semibold uppercase text-gray-400">Room Number</label><Input required value={roomFormData.roomNumber} onChange={e => setRoomFormData({...roomFormData, roomNumber: e.target.value})} /></div>
+                <div className="space-y-2"><label className="text-[10px] font-semibold uppercase text-gray-400">Room Number</label><Input required placeholder="e.g. 101" value={roomFormData.roomNumber} onChange={e => setRoomFormData({...roomFormData, roomNumber: e.target.value})} /></div>
                 <div className="space-y-2"><label className="text-[10px] font-semibold uppercase text-gray-400">Category</label>
                   <select className="w-full h-10 px-3 bg-gray-50 rounded-xl text-sm outline-none" value={roomFormData.roomTypeId} onChange={e => setRoomFormData({...roomFormData, roomTypeId: e.target.value})}>
                     <option value="">Select Category</option>
