@@ -595,53 +595,38 @@ const OrderManagement = () => {
       {isOrderModalOpen && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-50 flex items-center justify-center p-0 md:p-4">
           <div className="bg-white rounded-none md:rounded-xl w-full max-w-[1400px] h-full md:h-[95vh] shadow-[0_32px_64px_-12px_rgba(0,0,0,0.3)] overflow-hidden flex flex-col animate-in zoom-in-95 duration-300">
-             <div className="p-4 md:p-8 border-b flex justify-between items-center bg-gray-50/50">
+             <div className="px-6 py-4 md:px-8 md:py-4 border-b flex justify-between items-center bg-gray-50/50">
                <div>
-                 <h2 className="text-3xl font-semibold text-gray-900 italic tracking-tighter uppercase">Order Terminal</h2>
-                 <p className="text-xs text-gray-400 font-normal tracking-widest uppercase">POS Session | {new Date().toLocaleDateString()}</p>
+                 <h2 className="text-2xl font-semibold text-gray-900 italic tracking-tighter uppercase leading-none">Order Terminal</h2>
+                 <p className="text-[10px] text-gray-400 font-semibold tracking-widest uppercase mt-0.5">POS Session | {new Date().toLocaleDateString()}</p>
                </div>
-               <button onClick={() => setIsOrderModalOpen(false)} className="h-12 w-12 rounded-full hover:bg-gray-100 flex items-center justify-center transition-colors"><XCircle className="h-8 w-8 text-gray-300" /></button>
+               <button onClick={() => setIsOrderModalOpen(false)} className="h-10 w-10 rounded-full hover:bg-gray-100 flex items-center justify-center transition-colors"><XCircle className="h-6 w-6 text-gray-300" /></button>
              </div>
 
               <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
                 {/* Menu Area */}
                 <div className="flex-1 md:w-2/3 p-4 md:p-8 overflow-hidden flex flex-col bg-gray-50/30">
-                  <div className="mb-6 space-y-4">
-                    <div className="relative">
+                  <div className="mb-6 flex gap-3">
+                    <div className="relative flex-1">
                       <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
                       <Input 
                         placeholder="Search menu items..." 
-                        className="pl-12 h-14 rounded-2xl bg-white border-none shadow-sm text-lg"
+                        className="pl-12 h-14 rounded-2xl bg-white border-none shadow-sm text-lg font-medium"
                         value={menuSearchTerm}
                         onChange={e => setMenuSearchTerm(e.target.value)}
                       />
                     </div>
                     
-                    <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-                      <button
-                        onClick={() => setSelectedCategory('all')}
-                        className={`px-6 py-2 rounded-xl text-xs font-bold uppercase tracking-widest transition-all whitespace-nowrap ${
-                          selectedCategory === 'all' 
-                            ? 'bg-black text-white shadow-lg' 
-                            : 'bg-white text-gray-500 hover:bg-gray-100'
-                        }`}
-                      >
-                        All Items
-                      </button>
+                    <select
+                      value={selectedCategory}
+                      onChange={e => setSelectedCategory(e.target.value)}
+                      className="h-14 px-6 rounded-2xl bg-white border-none shadow-sm text-xs font-bold uppercase tracking-widest outline-none cursor-pointer focus:ring-2 focus:ring-[var(--theme-primary)]/20"
+                    >
+                      <option value="all">All Items</option>
                       {categories.map(cat => (
-                        <button
-                          key={cat.id}
-                          onClick={() => setSelectedCategory(cat.id)}
-                          className={`px-6 py-2 rounded-xl text-xs font-bold uppercase tracking-widest transition-all whitespace-nowrap ${
-                            selectedCategory === cat.id 
-                              ? 'bg-black text-white shadow-lg' 
-                              : 'bg-white text-gray-500 hover:bg-gray-100'
-                          }`}
-                        >
-                          {cat.name}
-                        </button>
+                        <option key={cat.id} value={cat.id}>{cat.name}</option>
                       ))}
-                    </div>
+                    </select>
                   </div>
 
                   <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar">
