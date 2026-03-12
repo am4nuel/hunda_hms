@@ -1,13 +1,21 @@
 const express = require('express');
 const router = express.Router();
 const reservationController = require('../controllers/tablereservation.controller');
-const { protect } = require('../middleware/auth.middleware');
+const { verifyToken } = require('../middleware/auth.middleware');
+const { validateApiKey } = require('../middleware/api.middleware');
+
+const authMiddleware = (req, res, next) => {
+  if (req.header('X-API-KEY')) {
+    return validateApiKey(req, res, next);
+  }
+  return verifyToken(req, res, next);
+};
 
 // Public route for website reservations
 router.post('/public', reservationController.createReservation);
 
 // Protected routes for dashboard
-router.use(protect);
+router.use(authMiddleware);
 
 router.route('/')
   .get(reservationController.getReservations)
