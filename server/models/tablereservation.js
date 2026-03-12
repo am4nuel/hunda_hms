@@ -40,6 +40,11 @@ module.exports = (sequelize, DataTypes) => {
     diningTableId: {
       type: DataTypes.INTEGER,
       allowNull: true // Can be null initially if table is not assigned
+    },
+    userId: {
+      type: DataTypes.UUID,
+      allowNull: true,
+      comment: 'Anonymous guest tracking ID'
     }
   }, {
     sequelize,

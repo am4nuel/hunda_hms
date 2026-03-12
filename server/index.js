@@ -113,15 +113,32 @@ app.use('/api/activity-logs', activityLogRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/recipes', recipeRoutes);
 app.use('/api/units', unitRoutes);
-console.log('tableReservationRoutes type:', typeof tableReservationRoutes);
 app.use('/api/table-reservations', tableReservationRoutes);
 
 const { seedUnits } = require('./utils/seedUnits');
+const { Umzug, SequelizeStorage } = require('umzug');
+
+const runMigrations = async (sq) => {
+  const umzug = new Umzug({
+    migrations: { glob: `${__dirname}/migrations/*.js` },
+    context: sq.getQueryInterface(),
+    storage: new SequelizeStorage({ sequelize: sq }),
+    logger: console,
+  });
+  await umzug.up();
+};
 
 server.listen(PORT, async () => {
   try {
     await sequelize.authenticate();
     console.log('Database connected successfully.');
+    
+    // Run all pending migrations automatically on startup
+    try {
+      await runMigrations(sequelize);
+    } catch (migErr) {
+      console.error('Migration error:', migErr.message);
+    }
     
     // Run seeders conditionally or unconditionally based on business logic
     await seedUnits();

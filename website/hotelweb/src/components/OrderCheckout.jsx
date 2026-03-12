@@ -134,10 +134,28 @@ export default function OrderCheckout({ items, total, onClose, onSuccess }) {
   const [receiptUrl, setReceiptUrl] = useState('');
   const [uploadingReceipt, setUploadingReceipt] = useState(false);
 
+  const [tables, setTables] = useState([]);
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   const totalSteps = 3;
+
+  // ── Fetch available tables ──────────────────────────────────────────────────
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch(`${apiConfig.apiUrl}/dining-tables`, {
+          headers: { 'X-API-KEY': apiConfig.apiKey },
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        setTables(data.filter(t => t.status === 'Available'));
+      } catch (err) {
+        console.error('Failed to fetch tables:', err);
+      }
+    })();
+  }, []);
 
   // ── Auto-save guest data ────────────────────────────────────────────────────
   useEffect(() => {
@@ -314,8 +332,21 @@ export default function OrderCheckout({ items, total, onClose, onSuccess }) {
               {/* ── Dine-in ── */}
               {serviceType === 'Dine-in' && (
                 <>
-                  <InputField label="Table Number" placeholder="e.g. 5"
-                    value={tableNumber} onChange={e => setTableNumber(e.target.value)} />
+                  <div className="space-y-2">
+                    <FieldLabel>Select Your Table</FieldLabel>
+                    <select
+                      className="w-full text-base font-sans border-b border-black/10 py-3 bg-transparent focus:outline-none focus:border-chalet-gold transition-colors text-chalet-dark appearance-none"
+                      value={tableNumber}
+                      onChange={e => setTableNumber(e.target.value)}
+                    >
+                      <option value="">Select a Table</option>
+                      {tables.map(table => (
+                        <option key={table.id} value={table.number}>
+                          Table {table.number} ({table.capacity} Seats)
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                   <div className="grid grid-cols-2 gap-3">
                     <InputField label="First Name" optional placeholder="John"
                       value={firstName} onChange={e => setFirstName(e.target.value)} />

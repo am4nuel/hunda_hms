@@ -35,6 +35,13 @@ const ORDER_STATUS = {
   'Delivered': { cls: 'bg-purple-50 text-purple-700 border-purple-100',Icon: CheckCircle2},
   'Cancelled': { cls: 'bg-red-50 text-red-600 border-red-100',        Icon: XCircle      },
 };
+const TABLE_RES_STATUS = {
+  'Pending':    { cls: 'bg-amber-50 text-amber-600 border-amber-100',   Icon: Clock         },
+  'Confirmed':  { cls: 'bg-green-50 text-green-600 border-green-100',   Icon: CheckCircle2  },
+  'Checked In': { cls: 'bg-blue-50 text-blue-600 border-blue-100',      Icon: LogIn         },
+  'Completed':  { cls: 'bg-purple-50 text-purple-700 border-purple-100',Icon: CheckCircle2   },
+  'Cancelled':  { cls: 'bg-red-50 text-red-600 border-red-100',         Icon: XCircle       },
+};
 const ORDER_TYPE_ICON = { 'Dine-in': UtensilsCrossed, 'Takeaway': ShoppingBag, 'Room Service': BedDouble };
 
 function StatusBadge({ status, map }) {
@@ -74,12 +81,14 @@ export default function ProfilePage() {
   const [profile, setProfile] = useState(null);
   const [bookings, setBookings] = useState([]);
   const [orders, setOrders]     = useState([]);
+  const [tableRes, setTableRes] = useState([]);
   const [loading, setLoading]   = useState(true);
   const [editing, setEditing]   = useState(false);
   const [formData, setFormData] = useState({});
   const [activeTab, setActiveTab] = useState('reservations');
   const [resFilter, setResFilter] = useState('All');
   const [orderFilter, setOrderFilter] = useState('All');
+  const [tableFilter, setTableFilter] = useState('All');
   const userId = getUserId();
 
   // ── Data fetch ────────────────────────────────────────────────────────────
@@ -89,10 +98,11 @@ export default function ProfilePage() {
       const savedGuest = getGuestData();
       const emailQ = savedGuest.email ? `&email=${encodeURIComponent(savedGuest.email)}` : '';
 
-      const [profileData, bookingsData, ordersData] = await Promise.all([
+      const [profileData, bookingsData, ordersData, tableResData] = await Promise.all([
         apiFetch(`/guests/profile?userId=${userId}${emailQ}`).catch(() => null),
         apiFetch(`/bookings?userId=${userId}`),
         apiFetch(`/orders?userId=${userId}`).catch(() => []),
+        apiFetch(`/table-reservations?userId=${userId}`).catch(() => []),
       ]);
 
       setProfile(profileData);
@@ -102,6 +112,7 @@ export default function ProfilePage() {
       }
       setBookings(bookingsData);
       setOrders(Array.isArray(ordersData) ? ordersData : []);
+      setTableRes(Array.isArray(tableResData) ? tableResData : []);
     } catch (err) {
       console.error('Profile fetch failed:', err);
     } finally {
@@ -118,10 +129,12 @@ export default function ProfilePage() {
     
     socket.on('bookingStatusUpdate', handler);
     socket.on('orderStatusUpdate', handler);
+    socket.on('tableReservationStatusUpdate', handler);
     
     return () => {
       socket.off('bookingStatusUpdate', handler);
       socket.off('orderStatusUpdate', handler);
+      socket.off('tableReservationStatusUpdate', handler);
     };
   }, [userId, fetchData]);
 
@@ -276,6 +289,10 @@ export default function ProfilePage() {
                         <p className="text-2xl font-serif text-chalet-gold">{orders.length}</p>
                         <p className="text-[9px] uppercase tracking-widest text-chalet-gray font-bold">Orders</p>
                       </div>
+                      <div className="bg-chalet-bg p-3 text-center">
+                        <p className="text-2xl font-serif text-chalet-gold">{tableRes.length}</p>
+                        <p className="text-[9px] uppercase tracking-widest text-chalet-gray font-bold">Dining</p>
+                      </div>
                     </div>
                   </div>
                 );
@@ -293,14 +310,20 @@ export default function ProfilePage() {
               <div className="flex overflow-x-auto hide-scrollbar">
                 <Tab label="Reservations" count={bookings.length} active={activeTab === 'reservations'}
                   onClick={() => setActiveTab('reservations')} Icon={BedDouble} />
+                <Tab label="Dining" count={tableRes.length} active={activeTab === 'dining'}
+                  onClick={() => setActiveTab('dining')} Icon={UtensilsCrossed} />
                 <Tab label="Orders" count={orders.length} active={activeTab === 'orders'}
-                  onClick={() => setActiveTab('orders')} Icon={UtensilsCrossed} />
+                  onClick={() => setActiveTab('orders')} Icon={ShoppingBag} />
               </div>
               <div className="px-6 py-3 sm:py-0 border-t sm:border-t-0 border-black/5 bg-white sm:bg-transparent">
                 <select
                   className="w-full sm:w-auto text-[11px] font-bold uppercase tracking-widest text-chalet-gray bg-transparent border-0 focus:ring-0 cursor-pointer outline-none hover:text-chalet-dark transition-colors"
-                  value={activeTab === 'reservations' ? resFilter : orderFilter}
-                  onChange={(e) => activeTab === 'reservations' ? setResFilter(e.target.value) : setOrderFilter(e.target.value)}
+                  value={activeTab === 'reservations' ? resFilter : activeTab === 'dining' ? tableFilter : orderFilter}
+                  onChange={(e) => {
+                    if (activeTab === 'reservations') setResFilter(e.target.value);
+                    else if (activeTab === 'dining') setTableFilter(e.target.value);
+                    else setOrderFilter(e.target.value);
+                  }}
                 >
                   <option value="All">Filter: All Statuses</option>
                   {activeTab === 'reservations' ? (
@@ -309,6 +332,14 @@ export default function ProfilePage() {
                       <option value="Confirmed">Confirmed</option>
                       <option value="Checked In">Checked In</option>
                       <option value="Checked Out">Checked Out</option>
+                      <option value="Cancelled">Cancelled</option>
+                    </>
+                  ) : activeTab === 'dining' ? (
+                    <>
+                      <option value="Pending">Pending</option>
+                      <option value="Confirmed">Confirmed</option>
+                      <option value="Checked In">Checked In</option>
+                      <option value="Completed">Completed</option>
                       <option value="Cancelled">Cancelled</option>
                     </>
                   ) : (
@@ -384,6 +415,78 @@ export default function ProfilePage() {
                           {b.specialRequests && (
                             <p className="mt-4 pt-4 border-t border-black/5 text-[11px] text-chalet-gray italic">
                               "{b.specialRequests}"
+                            </p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </>
+              )}
+
+              {/* ── DINING RESERVATIONS TAB ── */}
+              {activeTab === 'dining' && (
+                <>
+                  {tableRes.filter(tr => tableFilter === 'All' || tr.status === tableFilter).length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-20 text-chalet-gray/30">
+                      <UtensilsCrossed className="w-16 h-16 mb-4" />
+                      <p className="font-serif text-lg">
+                        {tableRes.length === 0 ? 'No dining reservations yet' : `No ${tableFilter.toLowerCase()} reservations`}
+                      </p>
+                      {tableRes.length === 0 && (
+                        <a href="/restaurant" className="mt-4 text-[10px] uppercase tracking-widest font-bold text-chalet-gold hover:opacity-70 transition-opacity flex items-center gap-1">
+                          Visit Restaurant <ChevronRight className="w-3 h-3" />
+                        </a>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="space-y-5">
+                      {tableRes.filter(tr => tableFilter === 'All' || tr.status === tableFilter).map(tr => (
+                        <div key={tr.id} className="border border-black/5 hover:border-chalet-gold/30 transition-all p-5 md:p-6">
+                          <div className="flex flex-col sm:flex-row justify-between gap-4">
+                            <div className="space-y-2">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <span className="text-[9px] uppercase tracking-widest font-bold px-2 py-0.5 bg-chalet-gold/10 text-chalet-gold border border-chalet-gold/20">
+                                  Dining #{tr.id}
+                                </span>
+                                <StatusBadge status={tr.status} map={TABLE_RES_STATUS} />
+                              </div>
+                              <h3 className="text-lg font-serif text-chalet-dark">
+                                {tr.DiningTable ? `Table ${tr.DiningTable.number}` : 'Dining Area'}
+                              </h3>
+                              <div className="flex flex-wrap items-center gap-3 text-[10px] font-bold text-chalet-gray uppercase tracking-widest">
+                                <span className="flex items-center gap-1.5">
+                                  <Clock className="w-3 h-3" />
+                                  {new Date(tr.reservationTime).toLocaleString()}
+                                </span>
+                                <span className="text-black/20">·</span>
+                                <span>{tr.numberOfGuests} Guests</span>
+                              </div>
+                            </div>
+                            <div className="flex flex-col sm:items-end justify-center">
+                              {tr.status === 'Pending' && (
+                                <button 
+                                  onClick={async () => {
+                                    if (!window.confirm('Cancel this reservation?')) return;
+                                    try {
+                                      setLoading(true);
+                                      await apiPatch(`/table-reservations/${tr.id}/status`, { status: 'Cancelled' });
+                                      toast.success('Reservation cancelled');
+                                      fetchData(true);
+                                    } catch (err) { toast.error(err.message); }
+                                    finally { setLoading(false); }
+                                  }}
+                                  disabled={loading}
+                                  className="px-4 py-2 bg-red-50 text-red-600 text-[9px] font-bold uppercase tracking-widest border border-red-100 hover:bg-red-600 hover:text-white transition-all disabled:opacity-50"
+                                >
+                                  Cancel Reservation
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                          {tr.notes && (
+                            <p className="mt-4 pt-4 border-t border-black/5 text-[11px] text-chalet-gray italic">
+                              "{tr.notes}"
                             </p>
                           )}
                         </div>

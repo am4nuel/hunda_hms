@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { apiPost, apiFetch } from '../lib/api';
+import { getUserId } from '../lib/storage';
 
 export default function TableReservationModal({ onClose }) {
   const [formData, setFormData] = useState({
@@ -10,7 +11,7 @@ export default function TableReservationModal({ onClose }) {
     reservationTime: '',
     numberOfGuests: 2,
     notes: '',
-    diningTableId: null
+    diningTableId: ''
   });
   const [loading, setLoading] = useState(false);
   const [tables, setTables] = useState([]);
@@ -30,10 +31,16 @@ export default function TableReservationModal({ onClose }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.reservationTime) return toast.error('Please select a reservation time');
+    if (!formData.diningTableId) return toast.error('Please select a table');
     
     setLoading(true);
     try {
-      await apiPost('/table-reservations/public', formData);
+      const payload = {
+        ...formData,
+        userId: getUserId(),
+        diningTableId: parseInt(formData.diningTableId)
+      };
+      await apiPost('/table-reservations/public', payload);
       toast.success('Reservation request sent!', {
         description: 'We will confirm your booking shortly.'
       });
@@ -102,6 +109,25 @@ export default function TableReservationModal({ onClose }) {
                 onChange={e => setFormData({ ...formData, reservationTime: e.target.value })}
               />
             </div>
+            <div className="space-y-2">
+              <label className="text-[10px] font-sans font-bold uppercase tracking-widest text-chalet-gray">Table Selection</label>
+              <select
+                required
+                className="w-full bg-chalet-bg border-none px-4 py-4 text-sm focus:ring-1 focus:ring-chalet-gold transition-all outline-none appearance-none"
+                value={formData.diningTableId}
+                onChange={e => setFormData({ ...formData, diningTableId: e.target.value })}
+              >
+                <option value="">Select a Table</option>
+                {tables.map(table => (
+                  <option key={table.id} value={table.id}>
+                    Table {table.number} ({table.capacity} Seats)
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
               <label className="text-[10px] font-sans font-bold uppercase tracking-widest text-chalet-gray">Guests</label>
               <input

@@ -15,7 +15,8 @@ import {
   MoreVertical,
   ChevronRight,
   History,
-  Info
+  Info,
+  Users
 } from 'lucide-react';
 import { 
   Table, 

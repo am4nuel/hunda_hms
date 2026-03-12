@@ -1,4 +1,5 @@
 const { TableReservation, DiningTable } = require('../models');
+const { getIO } = require('../utils/socket');
 
 // @desc    Get all table reservations for a hotel
 // @route   GET /api/table-reservations
@@ -7,8 +8,11 @@ const getReservations = async (req, res) => {
     const hotelId = req.user?.hotelId || req.hotelId || req.query.hotelId;
     if (!hotelId) return res.status(400).json({ message: "Hotel ID is required" });
     
+    const where = { hotelId };
+    if (req.query.userId) where.userId = req.query.userId;
+    
     const reservations = await TableReservation.findAll({ 
-      where: { hotelId },
+      where,
       include: [{ model: DiningTable }],
       order: [['reservationTime', 'DESC']]
     });
@@ -25,7 +29,7 @@ const createReservation = async (req, res) => {
     const hotelId = req.user?.hotelId || req.hotelId || req.body.hotelId;
     if (!hotelId) return res.status(400).json({ message: "Hotel ID is required" });
     
-    const { guestName, guestPhone, guestEmail, reservationTime, numberOfGuests, notes, diningTableId } = req.body;
+    const { guestName, guestPhone, guestEmail, reservationTime, numberOfGuests, notes, diningTableId, userId } = req.body;
 
     const reservation = await TableReservation.create({
       guestName,
@@ -35,10 +39,19 @@ const createReservation = async (req, res) => {
       numberOfGuests,
       notes,
       hotelId,
-      diningTableId
+      diningTableId,
+      userId
     });
 
-    res.status(201).json(reservation);
+    // Fetch full reservation with dining table for the dashboard
+    const fullReservation = await TableReservation.findByPk(reservation.id, {
+      include: [{ model: DiningTable }]
+    });
+
+    // Notify dashboard via socket
+    getIO().emit('newTableReservation', fullReservation);
+
+    res.status(201).json(fullReservation);
   } catch (error) {
     res.status(400).json({ message: error.message });
   }
@@ -78,6 +91,14 @@ const updateStatus = async (req, res) => {
     }
 
     await reservation.update({ status });
+
+    // Emit real-time update
+    getIO().emit('tableReservationStatusUpdate', { 
+      id: reservation.id, 
+      status, 
+      userId: reservation.userId 
+    });
+
     res.status(200).json(reservation);
   } catch (error) {
     res.status(400).json({ message: error.message });
