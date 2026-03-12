@@ -53,7 +53,6 @@ const OrderManagement = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
-  const [isTableModalOpen, setIsTableModalOpen] = useState(false);
   const { socket } = useSocket();
 
   // History tab state
@@ -79,8 +78,6 @@ const OrderManagement = () => {
     items: []
   });
 
-  // Table CRUD State
-  const [tableFormData, setTableFormData] = useState({ number: '', capacity: 2, status: 'Available' });
   const [editingTableId, setEditingTableId] = useState(null);
 
   useEffect(() => {
@@ -166,38 +163,7 @@ const OrderManagement = () => {
     }
   };
 
-  // Table CRUD Handlers
-  const handleTableSubmit = async (e) => {
-    e.preventDefault();
-    try {
-      if (editingTableId) {
-        await api.updateDiningTable(editingTableId, tableFormData);
-        toast.success('Table updated');
-      } else {
-        await api.createDiningTable(tableFormData);
-        toast.success('Table created');
-      }
-      setIsTableModalOpen(false);
-      setTableFormData({ number: '', capacity: 2, status: 'Available' });
-      setEditingTableId(null);
-      const res = await api.fetchDiningTables();
-      setTables(res.data);
-    } catch (error) {
-      toast.error(error.response?.data?.message || 'Action failed');
-    }
-  };
-
-  const handleDeleteTable = async (id) => {
-    if (window.confirm('Delete this table?')) {
-      try {
-        await api.deleteDiningTable(id);
-        setTables(tables.filter(t => t.id !== id));
-        toast.success('Table deleted');
-      } catch (error) {
-        toast.error('Failed to delete table');
-      }
-    }
-  };
+  // Order Handlers
 
   const addItemToOrder = (item) => {
     const existing = selectedItems.find(i => i.menuItemId === item.id);
@@ -233,7 +199,6 @@ const OrderManagement = () => {
       <Tabs defaultValue="kitchen" className="w-full">
         <TabsList className="bg-transparent border-b border-[var(--border)]/10 w-full justify-start rounded-none h-auto p-0 mb-6 overflow-x-auto whitespace-nowrap scrollbar-hide">
           <TabsTrigger value="kitchen" className="px-6 py-3 rounded-none border-b-2 border-transparent data-[state=active]:border-[var(--theme-primary)] data-[state=active]:bg-transparent font-semibold tracking-widest uppercase text-[10px] shrink-0">Live Kitchen</TabsTrigger>
-          <TabsTrigger value="tables" className="px-6 py-3 rounded-none border-b-2 border-transparent data-[state=active]:border(--theme-primary)] data-[state=active]:bg-transparent font-semibold tracking-widest uppercase text-[10px] shrink-0">Table Management</TabsTrigger>
           <TabsTrigger value="history" className="px-6 py-3 rounded-none border-b-2 border-transparent data-[state=active]:border-[var(--theme-primary)] data-[state=active]:bg-transparent font-semibold tracking-widest uppercase text-[10px] flex items-center gap-2 shrink-0">
             <History className="h-3 w-3" /> Order History
           </TabsTrigger>
@@ -386,37 +351,6 @@ const OrderManagement = () => {
         </Card>
         </TabsContent>
 
-        <TabsContent value="tables">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-xl font-normal">Restaurant Layout</h2>
-            <Button onClick={() => { setEditingTableId(null); setTableFormData({number:'', capacity:2, status:'Available'}); setIsTableModalOpen(true); }} className="rounded-xl bg-black text-white gap-2">
-              <Plus className="h-4 w-4" /> Add Table
-            </Button>
-          </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-6">
-             {tables.map(table => (
-               <Card key={table.id} className={`rounded-2xl border transition-all duration-300 hover:-translate-y-1 hover:shadow-lg ${table.status === 'Available' ? 'bg-white border-green-100 hover:border-green-300 shadow-sm' : 'bg-gray-50 border-red-100 opacity-95'}`}>
-                 <CardContent className="p-0 flex flex-col relative overflow-hidden">
-                   <div className={`absolute top-0 w-full h-1 ${table.status === 'Available' ? 'bg-green-500' : 'bg-red-500'}`} />
-                   <div className="p-4 flex flex-col items-start gap-3">
-                     <div className={`h-10 w-10 shrink-0 rounded-xl flex items-center justify-center shadow-inner ${table.status === 'Available' ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-500'}`}>
-                       <TableIcon className="h-5 w-5" />
-                     </div>
-                     <div className="flex flex-col items-start overflow-hidden">
-                       <h3 className="font-black text-lg text-gray-800 tracking-tight truncate w-full uppercase leading-none">T-{table.number}</h3>
-                       <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mt-1">{table.capacity} Seats</p>
-                       <Badge variant="outline" className={`mt-2 rounded-lg text-[9px] uppercase font-black tracking-widest px-2 py-0.5 ${table.status === 'Available' ? 'text-green-600 border-green-100 bg-green-50' : 'text-red-600 border-red-100 bg-red-50'}`}>{table.status}</Badge>
-                     </div>
-                   </div>
-                   <div className="flex w-full border-t border-gray-100 divide-x divide-gray-100 bg-gray-50/30">
-                     <button onClick={() => { setEditingTableId(table.id); setTableFormData(table); setIsTableModalOpen(true); }} className="flex-1 py-2.5 text-gray-500 hover:text-indigo-600 hover:bg-white transition-colors flex items-center justify-center gap-2 text-[10px] font-bold uppercase tracking-wider"><Edit2 className="h-3 w-3" /> Edit</button>
-                     <button onClick={() => handleDeleteTable(table.id)} className="flex-1 py-2.5 text-red-400 hover:text-red-600 hover:bg-white transition-colors flex items-center justify-center gap-2 text-[10px] font-bold uppercase tracking-wider"><Trash2 className="h-3 w-3" /> Delete</button>
-                   </div>
-                 </CardContent>
-               </Card>
-            ))}
-          </div>
-        </TabsContent>
 
         {/* ── ORDER HISTORY TAB ─────────────────────────────────────────────── */}
         <TabsContent value="history">
@@ -794,12 +728,12 @@ const OrderManagement = () => {
                     </div>
                   </div>
 
-                  <div className="p-8 bg-black text-white rounded-t-xl space-y-6">
+                  <div className="p-6 bg-black text-white rounded-t-xl space-y-4">
                     <div className="flex justify-between items-center">
                       <span className="text-xs font-semibold uppercase tracking-widest opacity-60">Total Bill</span>
-                      <span className="text-3xl font-semibold italic">ETB {selectedItems.reduce((acc, curr) => acc + (parseFloat(curr.price) * curr.quantity), 0).toFixed(2)}</span>
+                      <span className="text-2xl font-semibold italic">ETB {selectedItems.reduce((acc, curr) => acc + (parseFloat(curr.price) * curr.quantity), 0).toFixed(2)}</span>
                     </div>
-                    <Button onClick={handleCreateOrder} className="w-full h-16 bg-white text-black hover:bg-white/90 rounded-[24px] font-semibold uppercase tracking-widest text-sm shadow-[0_20px_40px_rgba(255,255,255,0.1)]">
+                    <Button onClick={handleCreateOrder} className="w-full h-12 bg-white text-black hover:bg-white/90 rounded-xl font-semibold uppercase tracking-widest text-xs shadow-lg">
                       Finalize Order
                     </Button>
                   </div>
@@ -895,40 +829,6 @@ const OrderManagement = () => {
         </div>
       </div>
 
-      {/* Table CRUD Modal */}
-      {isTableModalOpen && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
-          <Card className="w-full max-w-md rounded-xl overflow-hidden shadow-2xl border-none">
-            <CardHeader className="p-6 bg-gray-50">
-              <CardTitle className="text-xl font-semibold italic uppercase tracking-tighter">{editingTableId ? 'Edit Table' : 'Add New Table'}</CardTitle>
-            </CardHeader>
-            <CardContent className="p-6 space-y-6">
-               <div className="space-y-4">
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-semibold uppercase text-gray-400">Table Number</label>
-                    <Input value={tableFormData.number} onChange={e => setTableFormData({...tableFormData, number: e.target.value})} placeholder="e.g. 101" className="rounded-xl border-2 h-12 font-normal" />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-semibold uppercase text-gray-400">Capacity (Seats)</label>
-                    <Input type="number" value={tableFormData.capacity} onChange={e => setTableFormData({...tableFormData, capacity: e.target.value})} className="rounded-xl border-2 h-12 font-normal" />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-semibold uppercase text-gray-400">Initial Status</label>
-                    <div className="grid grid-cols-2 gap-2">
-                       {['Available', 'Occupied'].map(s => (
-                         <Button key={s} size="sm" variant={tableFormData.status === s ? 'default' : 'outline'} className={`rounded-xl font-semibold text-[10px] ${tableFormData.status === s ? 'bg-black text-white' : ''}`} onClick={() => setTableFormData({...tableFormData, status: s})}>{s}</Button>
-                       ))}
-                    </div>
-                  </div>
-               </div>
-               <div className="flex gap-2 pt-4">
-                  <Button onClick={() => setIsTableModalOpen(false)} variant="outline" className="flex-1 rounded-xl h-12 font-extrabold uppercase text-xs">Cancel</Button>
-                  <Button onClick={handleTableSubmit} className="flex-1 rounded-xl h-12 bg-black text-white font-extrabold uppercase text-xs">{editingTableId ? 'Save Changes' : 'Create Table'}</Button>
-               </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
     </div>
   );
 };

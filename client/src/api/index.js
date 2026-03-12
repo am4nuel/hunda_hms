@@ -105,6 +105,14 @@ export const createDiningTable = (data) => API.post('/dining-tables', data);
 export const updateDiningTable = (id, data) => API.put(`/dining-tables/${id}`, data);
 export const deleteDiningTable = (id) => API.delete(`/dining-tables/${id}`);
 
+// Table Reservations
+export const fetchTableReservations = () => API.get('/table-reservations');
+export const createTableReservation = (data) => API.post('/table-reservations', data);
+export const updateTableReservation = (id, data) => API.put(`/table-reservations/${id}`, data);
+export const updateTableReservationStatus = (id, status) => API.patch(`/table-reservations/${id}/status`, { status });
+export const deleteTableReservation = (id) => API.delete(`/table-reservations/${id}`);
+export const createPublicTableReservation = (data) => API.post('/table-reservations/public', data);
+
 // Bookings/Rooms (Active)
 export const fetchActiveBookings = () => API.get('/bookings?status=Checked In');
 

@@ -85,6 +85,7 @@ const activityLogRoutes = require('./routes/activityLog.routes');
 const notificationRoutes = require('./routes/notification.routes');
 const recipeRoutes = require('./routes/recipe.routes');
 const unitRoutes = require('./routes/unit.routes');
+const tableReservationRoutes = require('./routes/tablereservation.routes');
 
 app.get("/", (req, res) => {
   res.send("Hello from Express Server with WebSockets!");
@@ -112,6 +113,7 @@ app.use('/api/activity-logs', activityLogRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/recipes', recipeRoutes);
 app.use('/api/units', unitRoutes);
+app.use('/api/table-reservations', tableReservationRoutes);
 
 const { seedUnits } = require('./utils/seedUnits');
 

@@ -5,6 +5,7 @@ import { useCart } from '../hooks/useCart';
 import CartSidebar from '../components/CartSidebar';
 import OrderCheckout from '../components/OrderCheckout';
 import OrderSuccess from '../components/OrderSuccess';
+import TableReservationModal from '../components/TableReservationModal';
 
 const PLACEHOLDER_FOOD_IMAGES = [
   'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=800&q=80',
@@ -151,6 +152,7 @@ export default function RestaurantPage() {
   const [showCart, setShowCart] = useState(false);
   const [showCheckout, setShowCheckout] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [showReservation, setShowReservation] = useState(false);
   const [orderType, setOrderType] = useState('');
 
   const { items, addItem, removeItem, updateQty, updateNotes, clearCart, total, count } = useCart();
@@ -314,12 +316,12 @@ export default function RestaurantPage() {
         <p className="text-chalet-dark-light max-w-md mx-auto mb-12 text-sm font-light leading-relaxed">
           Experience an unforgettable dining experience. Call us or book directly via email.
         </p>
-        <a
-          href="tel:+1234567890"
+        <button
+          onClick={() => setShowReservation(true)}
           className="inline-block px-10 py-4 bg-transparent border border-chalet-dark text-chalet-dark font-sans text-xs font-semibold tracking-widest uppercase hover:bg-chalet-dark hover:text-white transition-all duration-500"
         >
-          Call to Book
-        </a>
+          Book Online
+        </button>
       </div>
 
       {/* Footer */}
@@ -357,6 +359,10 @@ export default function RestaurantPage() {
       {/* Success Screen */}
       {showSuccess && (
         <OrderSuccess orderType={orderType} onClose={() => setShowSuccess(false)} />
+      )}
+
+      {showReservation && (
+        <TableReservationModal onClose={() => setShowReservation(false)} />
       )}
     </div>
   );

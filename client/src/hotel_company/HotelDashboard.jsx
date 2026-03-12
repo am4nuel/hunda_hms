@@ -22,7 +22,8 @@ import {
   CreditCard,
   Package,
   History,
-  Truck
+  Truck,
+  Table as TableIcon
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { Button } from "@/components/ui/button";
@@ -86,6 +87,7 @@ const HotelDashboard = () => {
         { name: 'Menu Items', icon: Utensils, path: '/hotel-dashboard/menu-management' },
         { name: 'Recipes', icon: ChefHat, path: '/hotel-dashboard/recipe-management' },
         { name: 'Orders', icon: ShoppingBagIcon, path: '/hotel-dashboard/order-management' },
+        { name: 'Table Management', icon: TableIcon, path: '/hotel-dashboard/table-management' },
         { name: 'Kitchen Display', icon: ChefHat, path: '/hotel-dashboard/kitchen-display' },
       ]
     },

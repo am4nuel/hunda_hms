@@ -29,6 +29,7 @@ import ActivityLogs from './hotel_company/pages/ActivityLogs';
 import GuestNotifications from './hotel_company/pages/GuestNotifications';
 import RecipeManagement from './hotel_company/pages/RecipeManagement';
 import SupplierManagement from './hotel_company/pages/SupplierManagement';
+import TableManagement from './hotel_company/pages/TableManagement';
 import Settings from './hotel_company/pages/Settings';
 
 function App() {
@@ -68,6 +69,7 @@ function App() {
                 <Route path="recipe-management" element={<RecipeManagement />} />
                 <Route path="supplier-management" element={<SupplierManagement />} />
                 <Route path="property" element={<div className="text-[var(--theme-text)]">Hotel Details Page Coming Soon</div>} />
+                <Route path="table-management" element={<TableManagement />} />
                 <Route path="settings" element={<Settings />} />
               </Route>
             </Route>
