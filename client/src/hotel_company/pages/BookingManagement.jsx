@@ -899,7 +899,7 @@ const BookingManagement = () => {
                           <label className="text-[9px] font-semibold uppercase text-gray-400">Phone *</label>
                           <Input required value={inlineGuestForm.phone}
                             onChange={e => setInlineGuestForm(p => ({ ...p, phone: e.target.value }))}
-                            className="rounded-xl h-9 text-sm" placeholder="+1 234 567 890" />
+                            className="rounded-xl h-9 text-sm" placeholder="+251 912 345 678" />
                         </div>
                         <div className="grid grid-cols-2 gap-3">
                           <div className="space-y-1">
@@ -1054,20 +1054,20 @@ const BookingManagement = () => {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <label className="text-[10px] font-semibold uppercase text-gray-400">First Name</label>
-                  <Input required value={guestForm.firstName} onChange={e => setGuestForm(p => ({ ...p, firstName: e.target.value }))} className="rounded-xl" />
+                  <Input required placeholder="First name" value={guestForm.firstName} onChange={e => setGuestForm(p => ({ ...p, firstName: e.target.value }))} className="rounded-xl" />
                 </div>
                 <div className="space-y-2">
                   <label className="text-[10px] font-semibold uppercase text-gray-400">Last Name</label>
-                  <Input required value={guestForm.lastName} onChange={e => setGuestForm(p => ({ ...p, lastName: e.target.value }))} className="rounded-xl" />
+                  <Input required placeholder="Last name" value={guestForm.lastName} onChange={e => setGuestForm(p => ({ ...p, lastName: e.target.value }))} className="rounded-xl" />
                 </div>
               </div>
               <div className="space-y-2">
                 <label className="text-[10px] font-semibold uppercase text-gray-400">Email</label>
-                <Input type="email" required value={guestForm.email} onChange={e => setGuestForm(p => ({ ...p, email: e.target.value }))} className="rounded-xl" />
+                <Input type="email" required placeholder="email@example.com" value={guestForm.email} onChange={e => setGuestForm(p => ({ ...p, email: e.target.value }))} className="rounded-xl" />
               </div>
               <div className="space-y-2">
                 <label className="text-[10px] font-semibold uppercase text-gray-400">Phone</label>
-                <Input required value={guestForm.phone} onChange={e => setGuestForm(p => ({ ...p, phone: e.target.value }))} className="rounded-xl" />
+                <Input required placeholder="+251 912 345 678" value={guestForm.phone} onChange={e => setGuestForm(p => ({ ...p, phone: e.target.value }))} className="rounded-xl" />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
@@ -1082,7 +1082,7 @@ const BookingManagement = () => {
                 </div>
                 <div className="space-y-2">
                   <label className="text-[10px] font-semibold uppercase text-[var(--theme-text)] opacity-40">ID Number</label>
-                  <Input value={guestForm.idNumber} onChange={e => setGuestForm(p => ({ ...p, idNumber: e.target.value }))} className="rounded-xl" />
+                  <Input placeholder="ID number" value={guestForm.idNumber} onChange={e => setGuestForm(p => ({ ...p, idNumber: e.target.value }))} className="rounded-xl" />
                 </div>
               </div>
               <div className="space-y-2">

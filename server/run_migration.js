@@ -3,8 +3,10 @@ const config = require('./config/config.json').development;
 
 const sequelize = new Sequelize(config.database, config.username, config.password, {
   host: config.host,
+  port: config.port,
   dialect: config.dialect,
   logging: false,
+  dialectOptions: config.dialectOptions
 });
 
 (async () => {
@@ -13,6 +15,10 @@ const sequelize = new Sequelize(config.database, config.username, config.passwor
     console.log('✅ userId column added to Orders');
     await sequelize.query('ALTER TABLE "Orders" ADD COLUMN IF NOT EXISTS "paymentType" VARCHAR(255) DEFAULT \'Pay Now\'');
     console.log('✅ paymentType column added to Orders');
+
+    // Hotels Table Updates
+    await sequelize.query('ALTER TABLE "Hotels" ADD COLUMN IF NOT EXISTS "pendingReservationDuration" INTEGER DEFAULT 60');
+    console.log('✅ pendingReservationDuration column added to Hotels');
 
     // Suppliers Table
     await sequelize.query(`
