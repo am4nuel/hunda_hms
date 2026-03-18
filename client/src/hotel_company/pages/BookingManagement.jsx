@@ -939,6 +939,7 @@ const BookingManagement = () => {
                     <div className="space-y-2">
                       <label className="text-[10px] font-semibold uppercase text-[var(--theme-text)] opacity-40 tracking-widest">Check-In Date</label>
                       <Input type="date" required value={bookingForm.checkInDate}
+                        min={new Date().toISOString().split('T')[0]}
                         onChange={e => {
                           const newDate = e.target.value;
                           setBookingForm(p => {
@@ -960,7 +961,7 @@ const BookingManagement = () => {
                     <div className="space-y-2">
                       <label className="text-[10px] font-semibold uppercase text-[var(--theme-text)] opacity-40 tracking-widest">Check-Out Date</label>
                       <Input type="date" required value={bookingForm.checkOutDate}
-                        min={bookingForm.checkInDate}
+                        min={bookingForm.checkInDate || new Date().toISOString().split('T')[0]}
                         onChange={e => {
                           const newDate = e.target.value;
                           setBookingForm(p => {

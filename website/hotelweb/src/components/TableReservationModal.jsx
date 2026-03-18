@@ -104,6 +104,7 @@ export default function TableReservationModal({ onClose }) {
               <input
                 required
                 type="datetime-local"
+                min={new Date().toISOString().slice(0, 16)}
                 className="w-full bg-chalet-bg border-none px-4 py-4 text-sm focus:ring-1 focus:ring-chalet-gold transition-all outline-none"
                 value={formData.reservationTime}
                 onChange={e => setFormData({ ...formData, reservationTime: e.target.value })}

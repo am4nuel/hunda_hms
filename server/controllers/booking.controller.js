@@ -61,6 +61,14 @@ const createBooking = async (req, res) => {
       return res.status(400).json({ message: 'Guest, rooms, and dates are required' });
     }
 
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const checkIn = new Date(checkInDate);
+    if (checkIn < today) {
+      await t.rollback();
+      return res.status(400).json({ message: 'Check-in date cannot be in the past' });
+    }
+
     const hotel = await Hotel.findByPk(hotelId, { transaction: t });
     const pendingDuration = hotel?.pendingReservationDuration || 60; // Default to 60 minutes
     const expiryTime = new Date(Date.now() - pendingDuration * 60 * 1000);
@@ -203,6 +211,15 @@ const updateBooking = async (req, res) => {
 
     const booking = await Booking.findOne({ where: { id, hotelId } });
     if (!booking) return res.status(404).json({ message: 'Booking not found' });
+
+    if (checkInDate) {
+      const now = new Date();
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const checkIn = new Date(checkInDate);
+      if (checkIn < today) {
+        return res.status(400).json({ message: 'Check-in date cannot be in the past' });
+      }
+    }
 
     if (['Checked In', 'Checked Out', 'Cancelled'].includes(booking.status)) {
       return res.status(400).json({ message: `Cannot modify a booking with status: ${booking.status}` });

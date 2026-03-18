@@ -142,6 +142,13 @@ server.listen(PORT, async () => {
     
     // Run seeders conditionally or unconditionally based on business logic
     await seedUnits();
+
+    // Start background cleanup job for expired pending bookings
+    const { cleanupExpiredBookings } = require('./utils/cleanup');
+    // Run initial cleanup on startup
+    cleanupExpiredBookings();
+    // Then run every 15 minutes
+    setInterval(cleanupExpiredBookings, 15 * 60 * 1000);
   } catch (error) {
     console.error('Unable to connect to the database:', error);
   }

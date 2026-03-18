@@ -30,6 +30,13 @@ const createReservation = async (req, res) => {
     if (!hotelId) return res.status(400).json({ message: "Hotel ID is required" });
     
     const { guestName, guestPhone, guestEmail, reservationTime, numberOfGuests, notes, diningTableId, userId } = req.body;
+    
+    if (reservationTime) {
+      const now = new Date();
+      if (new Date(reservationTime) < now) {
+        return res.status(400).json({ message: "Reservation time cannot be in the past" });
+      }
+    }
 
     const reservation = await TableReservation.create({
       guestName,
